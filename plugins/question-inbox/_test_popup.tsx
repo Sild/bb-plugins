@@ -15,7 +15,8 @@ import {
 import app from "./app";
 import plugin, { rpcContract } from "./server";
 import type { QuestionRecord } from "./model";
-HTMLDialogElement.prototype.showModal = function () {
+HTMLDialogElement.prototype.showModal = vi.fn();
+HTMLDialogElement.prototype.show = function () {
   this.setAttribute("open", "");
 };
 HTMLDialogElement.prototype.close = function () {
@@ -203,7 +204,7 @@ it("Escape defers the question and preserves the draft", async () => {
   fireEvent.change(screen.getByRole("textbox"), {
     target: { value: "Later answer" },
   });
-  fireEvent(dialog, new Event("cancel", { bubbles: false, cancelable: true }));
+  fireEvent.keyDown(dialog, { key: "Escape" });
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   const saved = (await h.harness.behavior.callRpc("get", {
     id: r.id,
@@ -254,4 +255,29 @@ it("Custom answer clears suggested choices and survives Answer later", async () 
       .checked,
   ).toBe(false);
   expect(screen.getByText("Additional comments (optional)")).toBeTruthy();
+});
+
+it("opens nonmodally and lets terminal focus and keyboard input stay outside the popup", async () => {
+  const { r, mount } = await fixture();
+  const modal = vi.spyOn(HTMLDialogElement.prototype, "showModal");
+  const terminal = document.createElement("textarea");
+  terminal.setAttribute("aria-label", "Terminal input");
+  document.body.appendChild(terminal);
+  try {
+    mount();
+    window.dispatchEvent(new CustomEvent("bb-question-inbox-open", { detail: r.id }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(dialog.getAttribute("aria-modal")).toBe("false");
+    expect(modal).not.toHaveBeenCalled();
+    terminal.focus();
+    expect(document.activeElement).toBe(terminal);
+    const key = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    terminal.dispatchEvent(key);
+    expect(key.defaultPrevented).toBe(false);
+    expect(screen.getByRole("dialog")).toBe(dialog);
+  } finally {
+    terminal.remove();
+    modal.mockRestore();
+  }
 });

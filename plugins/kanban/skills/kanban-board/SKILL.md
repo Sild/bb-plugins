@@ -14,7 +14,7 @@ unrelated changes; a clean worktree with no changes needs no empty commit. The D
 command rejects a dirty Git workspace or an unfinished Git operation.
 
 New Git project tasks in the native composer default to a fresh worktree from the
-project checkout's current active local branch using Task worktree. The branch is read at actual creation time; Branch from is read-only and never defaults to origin/main. Obsidian defaults to Project checkout on the current active branch. Personal and non-Git tasks retain their environments.
+project checkout's current active local branch using Task worktree. The branch is read at actual creation time; Branch from is read-only and never defaults to origin/main. Obsidian and bb-plugins default to Project checkout on the current active branch. Personal and non-Git tasks retain their environments.
 When another unarchived thread shares the task environment, Accept captures the
 task commit and requires every sharing thread to belong to the same task tree.
 It waits until each is idle, merges that captured commit, records acceptance,

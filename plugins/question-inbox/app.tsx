@@ -86,7 +86,7 @@ function QuestionForm({
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current!;
-    element.showModal();
+    element.show();
     return () => element.close();
   }, []);
   const [position, setPosition] = useState(() =>
@@ -312,11 +312,17 @@ function QuestionForm({
   }
   return createPortal(
     <>
-      <style>{`.question-inbox-dialog::backdrop { background: rgb(0 0 0 / 0.4); }`}</style>
       <dialog
         ref={dialog}
+        aria-modal={false}
         aria-labelledby={`question-title-${initial.id}`}
         aria-describedby={`question-description-${initial.id}`}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (!busy) void later();
+        }}
         onCancel={(event) => {
           event.preventDefault();
           if (!busy) void later();
@@ -324,6 +330,7 @@ function QuestionForm({
         className="question-inbox-dialog rounded-xl border border-border bg-background text-foreground shadow-xl"
         style={{
           position: "fixed",
+          zIndex: 1000,
           ...position,
           right: "auto",
           bottom: "auto",

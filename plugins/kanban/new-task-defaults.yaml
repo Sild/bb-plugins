@@ -4,3 +4,4 @@ reasoning: medium
 # Match the checkout, so renaming the project does not remove the exception.
 projectCheckoutPaths:
   - ~/Obsidian
+  - ~/Projects/Personal/bb-plugins

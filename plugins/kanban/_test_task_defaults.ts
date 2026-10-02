@@ -16,6 +16,8 @@ function setup(path: string, kind = "standard", isGit = true) {
 test.each([
   [join(homedir(), "Obsidian"), "project-checkout"],
   [`${join(homedir(), "Obsidian")}/`, "project-checkout"],
+  [join(homedir(), "Projects/Personal/bb-plugins"), "project-checkout"],
+  [`${join(homedir(), "Projects/Personal/bb-plugins")}/`, "project-checkout"],
   ["/Users/sild/Projects/Personal/videogen", "kanban-task-worktree"],
 ])("new tasks at %s choose %s and read the current branch", async (path, provider) => {
   const harness = setup(path);

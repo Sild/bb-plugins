@@ -8,9 +8,10 @@ The plugin does not forcibly suspend provider computation.
 
 Questions open only when the user clicks Answer in the inbox or the question
 badge in a thread header. The form opens in place without navigating to the
-owning thread. Native HTML dialogs are portaled to the document body so their
-top layer stays above host windows; stale offscreen pane coordinates fall back
-to the viewport.
+owning thread. Nonmodal HTML dialogs are portaled to the document body above host panes without
+making the terminal or other panes inert. Escape inside the form defers the question;
+keyboard input outside the form stays with the focused pane. Stale offscreen pane
+coordinates fall back to the viewport.
 The app displays a popup with choices (none preselected) and optional free text.
 Answer later and Escape save the draft and hide the popup, leaving the question in
 Questions and the Needs your answer badge. Questions have no expiry. Server-side
