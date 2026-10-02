@@ -1,0 +1,15 @@
+.workflow-actions { position: relative; display: flex; align-items: center; min-width: 0; }
+.workflow-action-group { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--muted); color: var(--foreground); overflow: hidden; }
+.workflow-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 28px; padding: 3px 7px; font-size: 12px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.workflow-action + .workflow-action { border-left: 1px solid var(--border); }
+.workflow-action:hover:not(:disabled) { background: var(--accent); }
+.workflow-action:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.workflow-action:disabled { opacity: .5; cursor: default; }
+.workflow-error { position: absolute; bottom: calc(100% + 6px); right: 0; width: max-content; max-width: min(320px, 80vw); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--popover); color: var(--destructive); font-size: 12px; box-shadow: 0 2px 8px #0002; }
+@media (max-width: 640px) { .workflow-action { padding-inline: 5px; } .workflow-action svg { display: none; } }
+
+.workflow-placement-banner { display: none; }
+@media (max-width: 520px) {
+  .workflow-placement-action { display: none; }
+  .workflow-placement-banner { display: flex; margin-bottom: 6px; }
+}

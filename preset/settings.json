@@ -1,0 +1,459 @@
+{
+  "schemaVersion": 1,
+  "bbVersion": "0.44.0",
+  "plugins": [
+    {
+      "id": "account-pool",
+      "source": "builtin:account-pool",
+      "enabled": false
+    },
+    {
+      "id": "agent-annotations",
+      "source": "builtin:agent-annotations",
+      "enabled": false
+    },
+    {
+      "id": "ask-user-question",
+      "source": "builtin:ask-user-question",
+      "enabled": false
+    },
+    {
+      "id": "automations",
+      "source": "builtin:automations",
+      "enabled": true
+    },
+    {
+      "id": "bb-guide",
+      "source": "builtin:bb-guide",
+      "enabled": true
+    },
+    {
+      "id": "browser-automation",
+      "source": "builtin:browser-automation",
+      "enabled": true
+    },
+    {
+      "id": "concurrency-limit",
+      "source": "builtin:concurrency-limit",
+      "enabled": true
+    },
+    {
+      "id": "connect",
+      "source": "builtin:connect",
+      "enabled": true
+    },
+    {
+      "id": "custom-instructions",
+      "source": "builtin:custom-instructions",
+      "enabled": true
+    },
+    {
+      "id": "drafts",
+      "source": "builtin:drafts",
+      "enabled": true
+    },
+    {
+      "id": "environment-git-worktree",
+      "source": "builtin:environment-git-worktree",
+      "enabled": true
+    },
+    {
+      "id": "environment-personal-workspace",
+      "source": "builtin:environment-personal-workspace",
+      "enabled": true
+    },
+    {
+      "id": "environment-project-checkout",
+      "source": "builtin:environment-project-checkout",
+      "enabled": true
+    },
+    {
+      "id": "inline-vis",
+      "source": "builtin:inline-vis",
+      "enabled": true
+    },
+    {
+      "id": "kanban",
+      "source": "collection:kanban",
+      "enabled": true
+    },
+    {
+      "id": "keep-awake",
+      "source": "builtin:keep-awake",
+      "enabled": true
+    },
+    {
+      "id": "monaco-editor",
+      "source": "builtin:monaco-editor",
+      "enabled": false
+    },
+    {
+      "id": "navigation",
+      "source": "builtin:navigation",
+      "enabled": true
+    },
+    {
+      "id": "pdf-preview",
+      "source": "builtin:pdf-preview",
+      "enabled": true
+    },
+    {
+      "id": "plugin-api-docs",
+      "source": "builtin:plugin-api-docs",
+      "enabled": false
+    },
+    {
+      "id": "plugin-api-tester",
+      "source": "builtin:plugin-api-tester",
+      "enabled": false
+    },
+    {
+      "id": "project-groups",
+      "source": "collection:project-groups",
+      "enabled": true
+    },
+    {
+      "id": "provider-acp",
+      "source": "builtin:provider-acp",
+      "enabled": true
+    },
+    {
+      "id": "provider-claude-code",
+      "source": "builtin:provider-claude-code",
+      "enabled": true
+    },
+    {
+      "id": "provider-codex",
+      "source": "builtin:provider-codex",
+      "enabled": true
+    },
+    {
+      "id": "provider-pi",
+      "source": "builtin:provider-pi",
+      "enabled": true
+    },
+    {
+      "id": "provider-retry",
+      "source": "builtin:provider-retry",
+      "enabled": true
+    },
+    {
+      "id": "provider-usage",
+      "source": "builtin:provider-usage",
+      "enabled": true
+    },
+    {
+      "id": "provider-usage-all",
+      "source": "collection:provider-usage-all",
+      "enabled": true
+    },
+    {
+      "id": "push-notifications",
+      "source": "builtin:push-notifications",
+      "enabled": true
+    },
+    {
+      "id": "question-inbox",
+      "source": "collection:question-inbox",
+      "enabled": true
+    },
+    {
+      "id": "review-implement",
+      "source": "collection:review-implement",
+      "enabled": true
+    },
+    {
+      "id": "scheduled-send",
+      "source": "builtin:scheduled-send",
+      "enabled": true
+    },
+    {
+      "id": "secrets",
+      "source": "builtin:secrets",
+      "enabled": true
+    },
+    {
+      "id": "side-chat",
+      "source": "builtin:side-chat",
+      "enabled": true
+    },
+    {
+      "id": "thread-list",
+      "source": "builtin:thread-list",
+      "enabled": true
+    },
+    {
+      "id": "workflows",
+      "source": "builtin:workflows",
+      "enabled": false
+    }
+  ],
+  "pluginSettings": {
+    "bb-guide": {
+      "introduction": false,
+      "skills": true,
+      "bbCli": true,
+      "pluginAuthoring": true,
+      "skillCreator": true,
+      "submitPlugin": true
+    },
+    "connect": {
+      "sendRemoteInstructions": true
+    },
+    "custom-instructions": {
+      "instructions": ""
+    },
+    "provider-acp": {
+      "customAgents": ""
+    },
+    "provider-claude-code": {
+      "memoryEnabled": true,
+      "subagentsDisabled": false,
+      "workflowsDisabled": false,
+      "chromeEnabled": true
+    },
+    "provider-codex": {
+      "memoryEnabled": true,
+      "subagentsDisabled": false
+    },
+    "provider-retry": {
+      "maximumWait": "6 hours"
+    },
+    "push-notifications": {
+      "mobileEnabled": true,
+      "webEnabled": true,
+      "desktopEnabled": true,
+      "expoPushUrl": "https://exp.host/--/api/v2/push/send"
+    }
+  },
+  "general": {
+    "showKeyboardHints": true,
+    "steerActiveThreadOnEnter": true,
+    "showDiagnosticEvents": false,
+    "providerOrder": [],
+    "defaultProviderId": null,
+    "streamerMode": false,
+    "telemetryEnabled": true,
+    "managedBranchPrefix": "bb/"
+  },
+  "completedTurns": {
+    "pi": "flat",
+    "acp-cursor": "flat",
+    "claude-code": "collapse"
+  },
+  "experiments": {
+    "changelogPreview": false,
+    "legacyJitiPluginLoader": false,
+    "mobileApp": false,
+    "serverMove": false,
+    "sidebarProgressiveDisclosure": false
+  },
+  "ui": {
+    "sidebar.organizationMode": "chronological",
+    "sidebar.threadGrouping.environment": "auto",
+    "sidebar.chronologicalSort": "updated",
+    "sidebar.sortDirection": "default",
+    "sidebar.sectionOrder": [
+      "pinned",
+      "projects",
+      "threads"
+    ],
+    "sidebar.manualSectionOrder": [
+      "pinned",
+      "sections",
+      "threads"
+    ],
+    "sidebar.machineSectionOrder": [
+      "pinned",
+      "machines",
+      "threads"
+    ],
+    "sidebar.footerOrder": [],
+    "sidebar.hiddenFooterItems": [
+      "builtin:report-bug",
+      "plugin:provider-usage/usage"
+    ],
+    "sidebar.pluginPanelOrder": [
+      "__bb__/new-thread",
+      "__bb__/search-threads",
+      "__bb__/extensions",
+      "__bb__/skills",
+      "__bb__/automations"
+    ],
+    "sidebar.visiblePluginPanels": [
+      "__bb__/new-thread",
+      "__bb__/extensions",
+      "__bb__/skills",
+      "__bb__/automations",
+      "__bb__/search-threads"
+    ],
+    "sidebar.navigationProvider": "__automatic__",
+    "sidebar.headerProvider": "__builtin__",
+    "sidebar.threadListProvider": "__automatic__"
+  },
+  "keyboardOverrides": [
+    {
+      "command": "panel.toggle",
+      "shortcut": {
+        "key": "K",
+        "mod": true,
+        "meta": false,
+        "control": false,
+        "alt": false,
+        "shift": false
+      }
+    },
+    {
+      "command": "terminal.open",
+      "shortcut": {
+        "key": "J",
+        "mod": true,
+        "meta": false,
+        "control": false,
+        "alt": false,
+        "shift": false
+      }
+    },
+    {
+      "command": "thread.search",
+      "shortcut": {
+        "key": "K",
+        "mod": true,
+        "meta": false,
+        "control": false,
+        "alt": false,
+        "shift": true
+      }
+    },
+    {
+      "command": "diff.toggle",
+      "shortcut": {
+        "key": "L",
+        "mod": true,
+        "meta": false,
+        "control": false,
+        "alt": false,
+        "shift": false
+      }
+    }
+  ],
+  "appearance": {
+    "themeId": "dracula",
+    "customCss": null,
+    "faviconColor": "default"
+  },
+  "projectGroups": [
+    {
+      "name": "infra",
+      "sign": "",
+      "iconName": "Wrench",
+      "iconColor": "#a874f7"
+    },
+    {
+      "name": "custodian",
+      "sign": "",
+      "iconName": "CircleDollarSign",
+      "iconColor": "#38c878"
+    },
+    {
+      "name": "public",
+      "sign": "",
+      "iconName": "Plane",
+      "iconColor": "#3298f5"
+    },
+    {
+      "name": "personal",
+      "sign": "",
+      "iconName": "GraduationCap",
+      "iconColor": "#ffd43b"
+    }
+  ],
+  "projectAssignments": [
+    {
+      "projectName": "videogen",
+      "groupName": "personal"
+    },
+    {
+      "projectName": "htlc_watchdog",
+      "groupName": "custodian"
+    },
+    {
+      "projectName": "custody",
+      "groupName": "custodian"
+    },
+    {
+      "projectName": "stonfees",
+      "groupName": "custodian"
+    },
+    {
+      "projectName": "marketlib",
+      "groupName": "infra"
+    },
+    {
+      "projectName": "api-clients-rs",
+      "groupName": "public"
+    },
+    {
+      "projectName": "stonfi-scylla-client",
+      "groupName": "public"
+    },
+    {
+      "projectName": "stonfi-metrics",
+      "groupName": "public"
+    },
+    {
+      "projectName": "stonfi-sync-engine",
+      "groupName": "public"
+    },
+    {
+      "projectName": "ton-rs",
+      "groupName": "public"
+    },
+    {
+      "projectName": "tonabis-rs",
+      "groupName": "public"
+    },
+    {
+      "projectName": "tonlib-sys",
+      "groupName": "public"
+    },
+    {
+      "projectName": "stonlib2",
+      "groupName": "infra"
+    },
+    {
+      "projectName": "stonlib",
+      "groupName": "infra"
+    },
+    {
+      "projectName": "tongrid",
+      "groupName": "infra"
+    },
+    {
+      "projectName": "chain-sender",
+      "groupName": "custodian"
+    },
+    {
+      "projectName": "splitsmart",
+      "groupName": "personal"
+    },
+    {
+      "projectName": "bb-plugins",
+      "groupName": "personal"
+    }
+  ],
+  "pinnedProjects": [
+    "Obsidian"
+  ],
+  "aiServices": {
+    "thread-title": {
+      "mode": "automatic"
+    },
+    "commit-message": {
+      "mode": "automatic"
+    },
+    "voice": {
+      "mode": "automatic"
+    }
+  }
+}

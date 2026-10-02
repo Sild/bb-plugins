@@ -1,0 +1,29 @@
+/* Scoped to this sidebar provider; touch and keyboard retain every action. */
+.pg-sidebar button:focus-visible, .pg-sidebar a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.pg-sidebar .pg-secondary { transition: opacity 100ms ease; }
+.pg-sidebar .pg-archive {
+  position: absolute;
+  right: 2px;
+  background: var(--sidebar-background, var(--background));
+}
+.pg-sidebar .pg-thread-link[aria-current="page"] {
+  box-shadow: inset 2px 0 var(--primary);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pg-sidebar .pg-secondary { opacity: 0; pointer-events: none; }
+  .pg-sidebar .pg-row:hover .pg-secondary,
+  .pg-sidebar .pg-row:focus-within .pg-secondary,
+  .pg-sidebar .pg-secondary[data-state="open"] { opacity: 1; pointer-events: auto; }
+  .pg-sidebar .pg-thread:hover .pg-thread-link,
+  .pg-sidebar .pg-thread:focus-within .pg-thread-link { padding-right: 30px; }
+}
+@media (hover: none), (pointer: coarse) {
+  .pg-sidebar .pg-thread-link { padding-right: 30px; }
+  .pg-sidebar button { min-height: 32px; min-width: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-sidebar .pg-secondary { transition: none; }
+}

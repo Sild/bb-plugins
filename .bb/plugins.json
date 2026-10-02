@@ -1,0 +1,27 @@
+{
+  "$schema": "https://getbb.app/schemas/plugins.schema.json",
+  "schemaVersion": 1,
+  "name": "sild-bb-plugins",
+  "plugins": [
+    {
+      "name": "kanban",
+      "source": "./plugins/kanban"
+    },
+    {
+      "name": "project-groups",
+      "source": "./plugins/project-groups"
+    },
+    {
+      "name": "provider-usage-all",
+      "source": "./plugins/provider-usage-all"
+    },
+    {
+      "name": "question-inbox",
+      "source": "./plugins/question-inbox"
+    },
+    {
+      "name": "review-implement",
+      "source": "./plugins/review-implement"
+    }
+  ]
+}
