@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { definePluginApp, type ExperimentalSidebarFooterDisclosureProps } from "@get-bb/plugin-sdk/app";
 import { loadUsage, resetLabel, type UsageMachine, type UsageProvider, type UsageWindow } from "./usage";
 
@@ -37,12 +37,22 @@ function ProviderSection({ provider }: { provider: UsageProvider }) {
 }
 
 export function UsagePanel({ dismiss }: ExperimentalSidebarFooterDisclosureProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const [machines, setMachines] = useState<UsageMachine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [, tick] = useState(0);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const onClick = (event: MouseEvent) => {
+      if (!event.composedPath().includes(panel)) dismiss();
+    };
+    panel.ownerDocument.addEventListener("click", onClick, true);
+    return () => panel.ownerDocument.removeEventListener("click", onClick, true);
+  }, [dismiss]);
   useEffect(() => {
     const controller = new AbortController();
     let pending = false;
@@ -73,7 +83,7 @@ export function UsagePanel({ dismiss }: ExperimentalSidebarFooterDisclosureProps
     ?? machines.find(item => item.status === "connected" && item.providers.length > 0)
     ?? machines[0];
   const providers = machine?.providers.filter(provider => provider.usage?.status !== "not_installed") ?? [];
-  return <div className="flex max-h-[65vh] flex-col text-sidebar-foreground">
+  return <div ref={panelRef} className="flex max-h-[65vh] flex-col text-sidebar-foreground">
     <div className="flex items-center gap-2 border-b border-sidebar-border px-2.5 py-2">
       <h2 className="flex-1 text-xs font-semibold">Provider usage</h2>
       <button type="button" aria-label="Refresh all providers" disabled={loading} onClick={() => setRefresh(value => value + 1)} className="size-7 rounded hover:bg-sidebar-accent disabled:opacity-50">↻</button>

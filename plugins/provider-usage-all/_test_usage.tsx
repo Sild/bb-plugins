@@ -24,6 +24,28 @@ function fetchStub(failClaude = false) {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("combined usage", () => {
+  it("dismisses on outside clicks, including stopped propagation, and cleans up on unmount", async () => {
+    vi.stubGlobal("fetch", fetchStub());
+    const dismiss = vi.fn();
+    const { unmount } = render(<UsagePanel dismiss={dismiss} />);
+    await screen.findByRole("region", { name: "Claude usage" });
+    fireEvent.click(screen.getByText("Provider usage"));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh all providers" }));
+    expect(dismiss).not.toHaveBeenCalled();
+
+    const outside = document.createElement("button");
+    outside.addEventListener("click", event => event.stopPropagation());
+    document.body.append(outside);
+    try {
+      fireEvent.click(outside);
+      expect(dismiss).toHaveBeenCalledTimes(1);
+      unmount();
+      fireEvent.click(outside);
+      expect(dismiss).toHaveBeenCalledTimes(1);
+    } finally {
+      outside.remove();
+    }
+  });
   it("renders both providers without tabs and refreshes every provider", async () => {
     const fetch = fetchStub(); vi.stubGlobal("fetch", fetch);
     render(<UsagePanel dismiss={() => {}} />);
