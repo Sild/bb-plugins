@@ -5,17 +5,17 @@ import {
   useRealtime, useRpc, useSidebarThreadDraft, useSidebarThreadRowStatus, useSidebarThreadShortcut,
   type PluginSidebarProject, type PluginSidebarThread, type PluginThreadListProps,
 } from "@get-bb/plugin-sdk/app";
-import type { ProjectGroup, rpcContract } from "./server";
+import type { GroupState, ProjectGroup, rpcContract } from "./server";
 import { GroupMark, type Appearance } from "./IconPicker";
 import { ThreadCounts, useThreadCounts, sumProjectCounts, type Counts } from "./ThreadCounts";
 import { SectionEditor } from "./SectionEditor";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { usePortalScopeProps } from "./lib/portal-scope";
 import { ProjectSettingsOverlay } from "./ProjectSettings";
+import { ProjectManager } from "./ProjectManager";
 import { NewThreadAgentDefaults, NewThreadNavigationDefaults } from "./NewThreadDefaults";
 import "./sidebar.css";
 
-type GroupState = { groups: ProjectGroup[]; assignments: Record<string, string>; pinnedProjectIds: string[] };
 const button = "rounded p-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground";
 
 
@@ -131,13 +131,13 @@ function GroupSection({ group, first, last, edit, remove, move, children, counts
         <span title={group.name} className="min-w-0 flex-1 truncate">{group.name}</span>
         {!open && <ThreadCounts counts={counts} compact />}
       </button>
-      <Menu.Root><Menu.Trigger asChild><button type="button" className="pg-secondary rounded-md px-2 py-1 text-muted-foreground hover:bg-accent" aria-label={`Section options for ${group.name}`}>⋯</button></Menu.Trigger>
+      <Menu.Root><Menu.Trigger asChild><button type="button" className="pg-secondary rounded-md px-2 py-1 text-muted-foreground hover:bg-accent" aria-label={`Folder options for ${group.name}`}>⋯</button></Menu.Trigger>
         <Menu.Portal><Menu.Content {...scope} align="end" sideOffset={4} className="z-[1000] min-w-44 rounded-lg border border-border bg-popover p-1 text-sm text-popover-foreground shadow-lg">
-          <Menu.Item className="cursor-pointer rounded px-3 py-2 outline-none focus:bg-accent" onSelect={() => edit(group)}>Edit section</Menu.Item>
+          <Menu.Item className="cursor-pointer rounded px-3 py-2 outline-none focus:bg-accent" onSelect={() => edit(group)}>Edit folder</Menu.Item>
           <Menu.Item disabled={first} className="cursor-pointer rounded px-3 py-2 outline-none focus:bg-accent data-[disabled]:opacity-40" onSelect={() => move(group.id, "up")}>Move up</Menu.Item>
           <Menu.Item disabled={last} className="cursor-pointer rounded px-3 py-2 outline-none focus:bg-accent data-[disabled]:opacity-40" onSelect={() => move(group.id, "down")}>Move down</Menu.Item>
           <Menu.Separator className="my-1 h-px bg-border" />
-          <Menu.Item className="cursor-pointer rounded px-3 py-2 text-destructive outline-none focus:bg-accent" onSelect={() => remove(group.id)}>Delete section…</Menu.Item>
+          <Menu.Item className="cursor-pointer rounded px-3 py-2 text-destructive outline-none focus:bg-accent" onSelect={() => remove(group.id)}>Delete folder…</Menu.Item>
         </Menu.Content></Menu.Portal>
       </Menu.Root>
     </div>
@@ -152,6 +152,7 @@ function ProjectGroupsList(props: PluginThreadListProps) {
   const {counts, error: countError} = useThreadCounts(sidebar.threads);
   const [state, setState] = useState<GroupState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState<ProjectGroup | "new" | null>(null);
 
@@ -179,9 +180,9 @@ function ProjectGroupsList(props: PluginThreadListProps) {
   const pin = (projectId: string, nextPinned: boolean) =>
     void run(rpc.call("groups_pin_project", { projectId, pinned: nextPinned }));
   const projectRows = (groupId: string | null) => projects
-    .filter((project) => !pinned.has(project.id) && (state?.assignments[project.id] ?? null) === groupId)
+    .filter((project) => (groups.some(group => group.id === state?.assignments[project.id]) ? state?.assignments[project.id] : null) === groupId)
     .map((project) => <ProjectRow key={project.id} project={project} counts={counts[project.id]} threads={sidebar.threads}
-      pinned={false} activeProjectId={props.activeProjectId} activeThreadId={props.activeThreadId}
+      pinned={pinned.has(project.id)} activeProjectId={props.activeProjectId} activeThreadId={props.activeThreadId}
       onNavigate={props.onNavigate} pin={pin} />);
   const personal = sidebar.projects.find((project) => project.isPersonal);
   const ungroupedRows = projectRows(null);
@@ -190,10 +191,11 @@ function ProjectGroupsList(props: PluginThreadListProps) {
   return (
     <div className="pg-sidebar h-full overflow-y-auto pb-4">
       <div className="flex items-center justify-between mx-3 mt-4 mb-1 text-xs font-medium text-muted-foreground">
-        <span>Projects</span><button type="button" className={button} onClick={() => beginEdit("new")}>+ Section</button>
+        <span>Projects</span><button type="button" className={button} onClick={() => setManaging(true)}>Manage projects</button><button type="button" className={button} onClick={() => beginEdit("new")}>+ Folder</button>
       </div>
       {countError && <p className="px-3 pt-2 text-xs text-muted-foreground" role="status">Thread counts unavailable. Retrying…</p>}
       {error && <p role="alert" className="px-3 py-2 text-xs text-destructive">{error}</p>}
+      {managing && state && <ProjectManager state={state} close={() => setManaging(false)} changed={setState} />}
       {editing && <SectionEditor confirmDelete={confirmDelete} group={editing} close={() => setEditing(null)} save={save}
         remove={editing === "new" ? undefined : () => run(rpc.call("groups_delete", { id: editing.id }))} />}
       {sidebar.status === "loading" || !state ? <p className="px-3 py-3 text-xs text-muted-foreground">Loading projects…</p> : (

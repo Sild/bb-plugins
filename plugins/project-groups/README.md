@@ -6,8 +6,7 @@ Codex-style picker for emoji or a colored icon. Assign a project under
 folder appear under **Other projects**. Threads without a project appear directly
 under **Other threads**. These two default sections stay at the bottom and are hidden when empty. A project belongs to one folder.
 
-Use **Pin project** in the project options menu to show it in **Pinned** at the top. Unpinning returns it to
-its assigned folder. Folder names, icons, order, project assignments, and pins
+Use **Pin project** in the project options menu to show it in **Pinned** at the top. It remains visible in its assigned folder too. Unpinning removes only the Pinned appearance. Folder names, icons, order, project assignments, and pins
 are stored on the BB host and update in other open windows.
 
 ## Install
@@ -22,7 +21,9 @@ BB permits one sidebar thread-list provider at a time. Select **Project
 Groups** under **Settings → Appearance → Sidebar** if it does not become active
 automatically.
 
-Use **+ Section** to create a folder. Open its **⋯** menu to edit, reorder, or delete it. Deletion asks for confirmation. You can also create
+Use **Manage projects** to add multiple projects without starting tasks, search and select existing projects, move the selection to one folder, or pin/unpin the selection. **Add projects** accepts name/path rows on a connected host and a common folder. Existing host/path projects are reused. Failed rows remain editable for retry; successful rows are kept.
+
+Use **+ Folder** to create a folder. Open its **⋯** menu to edit, reorder, or delete it. Deletion asks for confirmation. You can also create
 or edit a folder on a project's settings page. Deleting a folder returns its
 projects to **Other projects**; it does not delete BB projects.
 

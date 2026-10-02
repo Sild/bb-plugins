@@ -28,7 +28,7 @@ describe("runtime-derived columns", () => {
 });
 
 describe("sidebar project folders", () => {
-  it("matches pinned/folder/other order, without dropping stale assignments or duplicating pinned projects", () => {
+  it("matches pinned/folder/other order, keeping pinned folder membership and stale assignments", () => {
     const result = projectFolders([
       { id: "personal", name: "Personal", isPersonal: true },
       { id: "p1", name: "Pinned", isPersonal: false },
@@ -42,7 +42,7 @@ describe("sidebar project folders", () => {
       assignments: { p1: "late", p2: "first", p3: "deleted-folder" }, pinnedProjectIds: ["deleted-project", "p1"],
     });
     expect(result.map(({ name, projectIds }) => ({ name, projectIds }))).toEqual([
-      { name: "Pinned", projectIds: ["p1"] }, { name: "First", projectIds: ["p2"] }, { name: "Other projects", projectIds: ["p3"] }, { name: "Other threads", projectIds: ["personal"] },
+      { name: "Pinned", projectIds: ["p1"] }, { name: "First", projectIds: ["p2"] }, { name: "Later", projectIds: ["p1"] }, { name: "Other projects", projectIds: ["p3"] }, { name: "Other threads", projectIds: ["personal"] },
     ]);
   });
 });
