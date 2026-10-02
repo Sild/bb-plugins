@@ -17,6 +17,24 @@ Restoration installs each custom plugin, restores bundled plugin enable/disable 
 
 The command targets the normal BB CLI server, usually `http://127.0.0.1:38886`. For a different instance, set `BB_SERVER_URL` explicitly. Sign in to Codex/Claude separately. Claude's Chrome integration also needs its browser extension and login.
 
+## Keep the repository updated
+
+```sh
+python3 scripts/enable_sync.py --project <your-bb-project-id>
+```
+
+Find the project ID with `bb project list --json`. This enables one BB script automation that checks **once a minute while BB runs**. It captures enabled, running local plugin sources, adds new local plugins to the collection, and updates plugin states and declared non-secret plugin settings. Built-in plugin code continues to come from BB.
+
+Portability fixes and independent repository edits are preserved through three-way merges. Conflicts stop capture and appear in the automation's run history; after resolving them, resume it in BB. No automatic commits or pushes occur. Source capture does not certify that an in-progress edit is tested. General app/sidebar preferences and project assignments remain the separately saved snapshot.
+
+For an immediate capture:
+
+```sh
+python3 scripts/sync_plugins.py
+```
+
+The first run establishes private local baselines for existing plugins. Keep the ignored `.bb/plugin-sync-state/` directory: deleting it resets the change baseline. If this checkout moves, run setup again to update the automation's working directory.
+
 ## Included plugins
 
 | Plugin | Purpose |
@@ -43,7 +61,7 @@ After this repository's commits have been pushed, BB can also install an individ
 bb plugin install git:https://github.com/Sild/bb-plugins.git@main --plugin question-inbox
 ```
 
-A Git install installs code only. Use the restore script from a clone for the full preference preset. Keep a local clone in place when using path installs: BB loads code from that directory. Future edits should be made in this repository; older copies under thread storage are separate snapshots.
+A Git install installs code only. Use the restore script from a clone for the full preference preset. Keep a local clone in place when using path installs: BB loads code from that directory. The optional sync automation keeps active local copies in step with this repository.
 
 ## Repository format
 

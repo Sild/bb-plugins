@@ -6,3 +6,4 @@
 - For plugin changes: `npm ci --include=dev`, `npm run typecheck`, `npm test`, and `bb plugin build .` in the affected directory.
 - For collection/preset changes: preview `python3 scripts/restore.py`, check JSON, and exercise restoration on a disposable BB instance. Never use the personal instance as a test fixture.
 - Run `git diff --check` before committing. Keep credentials, databases, installed dependencies, and generated bundles out of Git.
+- For sync changes: `python3 -m unittest discover -s scripts -p '_test_*.py'`; check the automatic-capture contract in the installation spec. Never commit `.bb/plugin-sync-state/`.

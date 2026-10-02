@@ -14,3 +14,11 @@ The disposable server used `/tmp/sild-bb-restore-check` with ports 39886/39887, 
 Fresh-install verification exposed and fixed Kanban's frontend import of a backend contract module: the worktree provider ID now resides in a shared constant module so building with development dependencies omitted succeeds. The Obsidian checkout exception now expands `~/Obsidian` instead of carrying the original machine's absolute home path. Three packages received standard validation/build scripts; other copied plugin behavior and workflow configuration were preserved.
 
 This verifies installation, server loading and saved state. Desktop visual behavior, provider authentication, real workflow launches, remote Git installation, and publication were not exercised. The original personal BB plugin sources and configuration were left unchanged.
+
+## Automatic capture validation
+
+The once-minute BB script automation was enabled on the repository project and exercised by multiple scheduled ticks. Runs completed with exit code zero and empty output (`skipped`, the intended no-change result). Running setup twice retained one automation and updated its stored wrapper/working directory.
+
+Ten deterministic Python regression tests cover source additions/removals, new-plugin indexing, active/disabled filtering, preservation of repository patches, no writes on file or setting conflicts, declared non-secret settings capture, manifest identity mismatches, ignored generated/credential files, and nested/top-level symlink destinations. Python compilation, shell syntax, and Git whitespace checks passed. An independent read-only review found the top-level symlink bypass; it was reproduced, fixed, and verified by both a regression and reviewer follow-up.
+
+The sync automation remains enabled by explicit user request. It captures content into the local working tree; it does not validate each future edit, auto-commit, or publish changes. Existing collection plugins' source baselines were initialized without changing their active source directories or the repository's portability patches. General UI preferences and project-group assignments remain the saved snapshot.
