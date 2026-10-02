@@ -335,6 +335,17 @@
         "alt": false,
         "shift": false
       }
+    },
+    {
+      "command": "app.back",
+      "shortcut": {
+        "key": "D",
+        "mod": true,
+        "meta": false,
+        "control": false,
+        "alt": false,
+        "shift": false
+      }
     }
   ],
   "appearance": {
