@@ -7,8 +7,7 @@ import {
 
 const resetEvent = "project-groups:new-thread";
 let sidebarProjectId: string | null = null;
-const sidebarAgent = { providerId: "codex", model: "gpt-6-sol", reasoningLevel: "medium" } as const;
-const defaultAgent = { providerId: "codex", model: "gpt-6-astra", reasoningLevel: "medium" } as const;
+const defaultAgent = { providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high" } as const;
 
 /** Keep the native navigation and composer; only override the global entry's project. */
 export function NewThreadNavigationDefaults() {
@@ -49,12 +48,12 @@ export function NewThreadAgentDefaults() {
       // Navigation can mount the destination after the click event has fired.
       // Keep its intent until the personal composer is ready, then consume it.
       if (sidebarProjectId !== null && latest.current.scope.projectId !== sidebarProjectId) return;
-      const agent = sidebarProjectId !== null ? sidebarAgent : defaultAgent;
+      const agent = defaultAgent;
       sidebarProjectId = null;
       setError(null);
       void latest.current.experimental_setSelection(agent).then(selection => {
         if (!disposed && (selection.providerId !== agent.providerId || selection.model !== agent.model || selection.reasoningLevel !== agent.reasoningLevel)) {
-          setError(`${agent.model === "gpt-6-sol" ? "6-Sol" : "6-Astra"} Medium is unavailable on the selected machine. Choose an available agent.`);
+          setError(`GPT-6.1-Sol High is unavailable on the selected machine. Choose an available agent.`);
         }
       }).catch(cause => {
         if (!disposed) setError(`Could not select the default agent: ${cause instanceof Error ? cause.message : String(cause)}`);

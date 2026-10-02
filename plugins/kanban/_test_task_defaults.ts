@@ -18,15 +18,15 @@ test.each([
   [`${join(homedir(), "Obsidian")}/`, "project-checkout"],
   [join(homedir(), "Projects/Personal/bb-plugins"), "project-checkout"],
   [`${join(homedir(), "Projects/Personal/bb-plugins")}/`, "project-checkout"],
-  ["/Users/sild/Projects/Personal/videogen", "kanban-task-worktree"],
+  ["/Users/sild/Projects/Personal/videogen", "project-checkout"],
 ])("new tasks at %s choose %s and read the current branch", async (path, provider) => {
   const harness = setup(path);
   expect(await harness.behavior.callRpc("board_default_environment", { projectId: "p", hostId: "h" })).toMatchObject({ hostId: "h", branch: "current-feature", environmentProviderId: provider });
-  expect(await harness.behavior.callRpc("board_task_defaults", { projectId: "p", hostId: "h" })).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "medium", environment: { hostId: "h", environmentProviderId: provider } });
+  expect(await harness.behavior.callRpc("board_task_defaults", { projectId: "p", hostId: "h" })).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high", environment: { hostId: "h", environmentProviderId: provider } });
 });
 test("no-project and personal tasks have model defaults without a worktree", async () => {
   const harness = setup("/personal", "personal");
-  for (const projectId of [null, "p"]) expect(await harness.behavior.callRpc("board_task_defaults", { projectId, hostId: null })).toMatchObject({ model: "gpt-6.1-sol", reasoningLevel: "medium", environment: null });
+  for (const projectId of [null, "p"]) expect(await harness.behavior.callRpc("board_task_defaults", { projectId, hostId: null })).toMatchObject({ model: "gpt-6.1-sol", reasoningLevel: "high", environment: null });
 });
 test("non-Git projects retain their normal environment", async () => {
   const harness = setup("/notes", "standard", false);

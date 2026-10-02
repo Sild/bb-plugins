@@ -43,7 +43,7 @@ export const rpcContract = defineRpcContract({
   },
   board_task_defaults: {
     input: z.object({ projectId: z.string().nullable(), hostId: z.string().nullable() }),
-    output: z.object({ providerId: z.literal("codex"), model: z.string(), reasoningLevel: z.literal("medium"), environment: z.object({ hostId: z.string(), environmentProviderId: z.string() }).nullable() }),
+    output: z.object({ providerId: z.literal("codex"), model: z.string(), reasoningLevel: z.literal(newTaskDefaults.reasoning), environment: z.object({ hostId: z.string(), environmentProviderId: z.string() }).nullable() }),
   },
   board_accept_plan: {
     input: z.object({ threadId: z.string().min(1), parentThreadId: z.string().min(1), reviewThreadId: z.string().min(1) }),
@@ -267,8 +267,7 @@ export default function plugin(bb: BbPluginApi) {
     const state = await merges.host.call("inspect", { path: source.path }, { hostId: source.hostId });
     if (!state.isGit) return null;
     if (!state.branch) throw new Error("Choose a checked-out branch before starting a task.");
-    const checkout = newTaskDefaults.projectCheckoutPaths.includes(source.path.replace(/\/$/, ""));
-    return { hostId: source.hostId, branch: state.branch, environmentProviderId: checkout ? "project-checkout" : "kanban-task-worktree" };
+    return { hostId: source.hostId, branch: state.branch, environmentProviderId: newTaskDefaults.environmentProvider };
   }
 
   async function acceptDeliveredArtifact(threadId: string): Promise<Card> {

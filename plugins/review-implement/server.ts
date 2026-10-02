@@ -126,7 +126,8 @@ export default async function plugin(bb: BbPluginApi) {
     const title = job.kind === "review" ? sourceTitle : sourceTitle.replace(/^(?:\[(?:👁|PLAN|DESIGN|<\/>)\]\s*)+/, "") || sourceTitle;
     const prefix = job.kind === "review" ? "[👁]" : job.kind === "implementation" ? "[</>]" : `[${job.kind.toUpperCase()}]`;
     const separator = job.kind === "review" && /^\[(?:PLAN|DESIGN|<\/>)\] /.test(title) ? "" : " ";
-    const nativeFork = fullContext && parent.providerId === "codex";
+    const planning = job.kind === "plan" || job.kind === "design";
+    const nativeFork = fullContext && planning && parent.providerId === "codex";
     const context = fullContext && !nativeFork ? await history(parentId) : "";
     const child = await bb.sdk.threads.spawn({
       projectId: parent.projectId,
@@ -134,7 +135,8 @@ export default async function plugin(bb: BbPluginApi) {
       ...(nativeFork ? { originKind: "fork" as const, sourceThreadId: parentId } : {}),
       title: `${prefix}${separator}${title}`,
       providerId: job.provider,
-      ...(job.provider === "codex" ? { model: workflow.model, reasoningLevel: job.kind === "plan" || job.kind === "design" ? workflow.planningReasoning : job.kind === "review" ? workflow.reviewReasoning : workflow.implementationReasoning } : {}),
+      ...(job.provider === "codex" ? { model: planning ? workflow.planningModel : job.kind === "review" ? workflow.reviewModel : workflow.implementationModel } : {}),
+      reasoningLevel: planning ? workflow.planningReasoning : job.kind === "review" ? workflow.reviewReasoning : workflow.implementationReasoning,
       prompt: context + prompt,
       permissionMode: job.kind === "implementation" || job.kind === "review" ? "auto" : "accept-edits",
       pluginMetadata: { kind: job.kind, sourceThreadId: job.sourceThreadId, workflowParentThreadId: parentId, ...(job.artifactThreadId ? { artifactThreadId: job.artifactThreadId } : {}) },
@@ -148,8 +150,9 @@ export default async function plugin(bb: BbPluginApi) {
   }
   async function startReview(artifactId: string, artifactJob: Job, provider?: Job["provider"]) {
     const requestId = await artifactRequestId(artifactId);
+    const { output: artifact } = await bb.sdk.threads.output({ threadId: artifactId });
     return spawnJob(artifactId, { kind: "review", sourceThreadId: artifactJob.sourceThreadId, artifactThreadId: artifactId, artifactRequestId: requestId, reviewRound: artifactJob.reviewRound, provider: provider ?? await reviewer(artifactId), phase: "working" },
-      `${workflow.instructions.review}\n\nOriginal requirements: @thread:${artifactJob.sourceThreadId}. Artifact to review: @thread:${artifactId}. Use bb thread show and bb thread log to read both threads completely. This is review round ${artifactJob.reviewRound}.`);
+      `${workflow.instructions.review}\n\nOriginal requirements: @thread:${artifactJob.sourceThreadId}. Artifact to review: @thread:${artifactId}. Use bb thread show and bb thread log to verify the latest requirements and referenced evidence. This is review round ${artifactJob.reviewRound}.\n\nComplete artifact:\n${artifact ?? "No final artifact available; read the artifact thread."}`);
   }
   async function failure(job: Job, childId: string, report: string) {
     await bb.sdk.threads.send({ threadId: job.sourceThreadId, mode: "auto", input: message(`Workflow thread @thread:${childId} could not complete its reviewed artifact. Investigate this blocker before treating the work as complete.\n\n${report}`) });
@@ -261,7 +264,10 @@ export default async function plugin(bb: BbPluginApi) {
 
   bb.rpc.register(rpcContract, {
     startPlan: async ({ threadId: id, kind, instruction }) => ({ childThreadId: await spawnJob(id, { kind, sourceThreadId: id, reviewRound: 1, provider: "codex", phase: "working" }, `${workflow.instructions.common}\n\n${workflow.instructions[kind]}\n\nSource thread: @thread:${id}.\n\nLatest composer request:\n${instruction ?? ""}`, true) }),
-    startImplementation: async ({ threadId: id, instruction }) => ({ childThreadId: await spawnJob(id, { kind: "implementation", sourceThreadId: id, reviewRound: 1, provider: "codex", phase: "working" }, `${workflow.instructions.common}\n\n${workflow.instructions.implementation}\n\nPlan and source requirements: @thread:${id}. Use bb thread show and bb thread log to read its full artifacts.\n\nLatest composer request:\n${instruction ?? ""}`, true) }),
+    startImplementation: async ({ threadId: id, instruction }) => {
+      const { output: artifact } = await bb.sdk.threads.output({ threadId: id });
+      return { childThreadId: await spawnJob(id, { kind: "implementation", sourceThreadId: id, reviewRound: 1, provider: "codex", phase: "working" }, `${workflow.instructions.common}\n\n${workflow.instructions.implementation}\n\nPlan and source requirements: @thread:${id}. Use bb thread show and bb thread log to read its full artifacts.\n\nLatest composer request:\n${instruction ?? ""}\n\nSource artifact:\n${artifact ?? "No final artifact available; read the source thread."}`) };
+    },
   });
   bb.events.on("thread.idle", ({ thread, lastAssistantText }) => deliver(thread.id, lastAssistantText, false));
   bb.events.on("thread.failed", ({ thread, error }) => deliver(thread.id, error, true));

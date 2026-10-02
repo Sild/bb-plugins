@@ -92,14 +92,17 @@ describe("reviewed artifact workflows", () => {
   it.each(["plan", "design"] as const)("forks full context for %s at xhigh, reviews with Claude, returns the whole artifact and accepts both children", async kind => {
     const ctx = await setup();
     await ctx.harness.behavior.callRpc("startPlan", { threadId: "root", kind, instruction: "Newest request" });
-    expect(ctx.spawned[0]).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "xhigh", sourceThreadId: "root", originKind: "fork", title: `[${kind.toUpperCase()}] Project` });
+    expect(ctx.spawned[0]).toMatchObject({ providerId: "codex", model: "gpt-6-astra", reasoningLevel: "xhigh", sourceThreadId: "root", originKind: "fork", title: `[${kind.toUpperCase()}] Project` });
     expect(ctx.spawned[0].prompt).toContain("Newest request");
     expect(ctx.links.get("child-1")).toBe("root");
     expect(ctx.threads.get("child-1")!.parentThreadId).toBeNull();
     const artifact = "complete artifact ".repeat(2000);
     await ctx.idle("child-1", artifact);
-    expect(ctx.spawned[1]).toMatchObject({ providerId: "claude-code", permissionMode: "auto", title: `[👁][${kind.toUpperCase()}] Project` });
+    expect(ctx.spawned[1]).toMatchObject({ providerId: "claude-code", permissionMode: "auto", reasoningLevel: "high", title: `[👁][${kind.toUpperCase()}] Project` });
     expect(ctx.spawned[1]).not.toHaveProperty("model");
+    expect(ctx.spawned[1]).not.toHaveProperty("sourceThreadId");
+    expect(ctx.spawned[1]).not.toHaveProperty("originKind");
+    expect(ctx.spawned[1].prompt).toContain(artifact);
     expect(ctx.spawned[1]).not.toHaveProperty("parentThreadId");
     expect(ctx.links.get("child-2")).toBe("child-1");
     expect(ctx.threads.get("child-2")!.parentThreadId).toBeNull();
@@ -113,12 +116,29 @@ describe("reviewed artifact workflows", () => {
     await ctx.idle("child-2", "No material findings\nREVIEW_STATUS: approved");
     expect(ctx.sent).toHaveLength(1);
   });
+  it("hands the complete plan and latest request to a fresh implementation session", async () => {
+    const ctx = await setup();
+    await ctx.harness.behavior.callRpc("startPlan", { threadId: "root", kind: "plan" });
+    const artifact = "Requirements, checkout, decisions, exact paths, checks and acceptance criteria";
+    await ctx.idle("child-1", artifact);
+    await ctx.harness.behavior.callRpc("startImplementation", { threadId: "child-1", instruction: "Latest correction" });
+    const implementation = ctx.spawned[2];
+    expect(implementation).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high", environment: { type: "reuse", environmentId: "environment" } });
+    expect(implementation).not.toHaveProperty("originKind");
+    expect(implementation).not.toHaveProperty("sourceThreadId");
+    expect(implementation.prompt).toContain(artifact);
+    expect(implementation.prompt).toContain("Latest correction");
+    expect(implementation.prompt).toContain("@thread:child-1");
+  });
   it.each([100, null])("uses Codex High when Claude quota is %s", async quota => {
     const ctx = await setup({ quota });
     await ctx.harness.behavior.callRpc("startImplementation", { threadId: "root" });
     expect(ctx.spawned[0]).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high", title: "[</>] Project" });
+    expect(ctx.spawned[0]).not.toHaveProperty("sourceThreadId");
+    expect(ctx.spawned[0]).not.toHaveProperty("originKind");
+    expect(ctx.spawned[0].prompt).not.toContain("Full source conversation timeline");
     await ctx.idle("child-1", "Implementation at commit abc");
-    expect(ctx.spawned[1]).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high", title: "[👁][</>] Project" });
+    expect(ctx.spawned[1]).toMatchObject({ providerId: "codex", model: "gpt-6-astra", reasoningLevel: "high", title: "[👁][</>] Project" });
     await ctx.idle("child-2", "No material findings\nREVIEW_STATUS: approved");
     expect(ctx.accepted).toEqual(["child-2"]); // Implementation still requires user acceptance.
   });
@@ -163,7 +183,7 @@ describe("reviewed artifact workflows", () => {
     await ctx.harness.behavior.callRpc("startPlan", { threadId: "root", kind: "plan" }); await ctx.idle("child-1", "Plan");
     ctx.setQuota(100); ctx.threads.get("child-2")!.status = "error";
     await ctx.harness.behavior.emitThreadEvent("thread.failed", { thread: ctx.threads.get("child-2")!, error: "Quota exhausted" });
-    expect(ctx.spawned[2]).toMatchObject({ providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high", title: "[👁][PLAN] Project" });
+    expect(ctx.spawned[2]).toMatchObject({ providerId: "codex", model: "gpt-6-astra", reasoningLevel: "high", title: "[👁][PLAN] Project" });
     expect(ctx.sent).toHaveLength(0);
     expect(ctx.threads.get("child-2")!.parentThreadId).toBeNull();
   });

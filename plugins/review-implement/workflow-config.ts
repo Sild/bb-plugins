@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const text = z.string().min(1);
 const schema = z.object({
-  model: z.literal("gpt-6.1-sol"), planningReasoning: z.literal("xhigh"),
+  planningModel: z.literal("gpt-6-astra"), implementationModel: z.literal("gpt-6.1-sol"), reviewModel: z.literal("gpt-6-astra"), planningReasoning: z.literal("xhigh"),
   implementationReasoning: z.literal("high"), reviewReasoning: z.literal("high"),
   maxReviewRounds: z.number().int().min(1).max(10),
   instructions: z.object({ common: text, plan: text, design: text, implementation: text, review: text, fixes: text }).strict(),

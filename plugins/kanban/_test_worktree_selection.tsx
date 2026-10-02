@@ -10,7 +10,7 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useRpc: () => mocks.rpc,
 }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); vi.useRealTimers(); mocks.projectId = "videogen"; });
-const agent = { providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "medium" };
+const agent = { providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high" };
 const environment = (provider: string) => ({ type: "provider", environmentProviderId: provider, machine: { type: "existing", hostId: "machine" }, inputs: {} });
 
 test.each(["kanban-task-worktree", "project-checkout"])("seeds %s and reapplies the model after environment reconciliation", async provider => {
@@ -38,7 +38,7 @@ test("an unavailable model remains visible instead of silently using Astra", asy
   mocks.selection.mockResolvedValue({ ...agent, model: "gpt-6-astra" });
   mocks.rpc.call.mockResolvedValue({ ...agent, environment: null });
   render(<NewThreadWorktree />);
-  expect((await screen.findByRole("alert")).textContent).toContain("Sol Medium is unavailable");
+  expect((await screen.findByRole("alert")).textContent).toContain("Sol High is unavailable");
 });
 test("reports a reconciled environment mismatch", async () => {
   mocks.selection.mockResolvedValue({ ...agent, environment: environment("project-checkout") });

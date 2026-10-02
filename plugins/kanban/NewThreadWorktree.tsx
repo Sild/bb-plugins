@@ -30,7 +30,7 @@ export function NewThreadWorktree() {
       // Reapply after that commit; never keep fighting subsequent user choices.
       const selected = await latest.current.experimental_setSelection({ providerId: choice.providerId, model: choice.model, reasoningLevel: choice.reasoningLevel });
       if (!active()) return;
-      if (selected.providerId !== choice.providerId || selected.model !== choice.model || selected.reasoningLevel !== choice.reasoningLevel) throw new Error("GPT-6.1-Sol Medium is unavailable on the selected machine. Choose an available model.");
+      if (selected.providerId !== choice.providerId || selected.model !== choice.model || selected.reasoningLevel !== choice.reasoningLevel) throw new Error("GPT-6.1-Sol High is unavailable on the selected machine. Choose an available model.");
       if (choice.environment && selected.environment && (selected.environment.type !== "provider" || selected.environment.environmentProviderId !== choice.environment.environmentProviderId)) throw new Error("The default environment is unavailable on the selected machine. Choose an available environment.");
     }
     void apply().catch(cause => { if (active()) setError(`Could not apply new-task defaults: ${cause instanceof Error ? cause.message : String(cause)}`); }).finally(() => { if (active()) latest.current.setInputLock(false); });

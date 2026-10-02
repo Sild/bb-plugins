@@ -66,9 +66,9 @@ If metadata cannot be loaded, counts are hidden and an unavailable notice appear
 ## New thread defaults
 
 The global sidebar **New thread** action starts with **No project** (BB’s personal
-workspace) with Codex **6-Sol Medium**. Project-specific **+** actions retain their project. Native composer
+workspace) with Codex **GPT-6.1-Sol High**. Project-specific **+** actions retain their project. Native composer
 controls, drafts, and attachments remain owned by BB. Other new task composers default
-to Codex **6-Astra Medium**; users can choose another agent before submitting.
+to Codex **GPT-6.1-Sol High**; users can choose another agent before submitting.
 This also applies when opening a new project compose surface. Existing threads
 are unchanged. The navigation adapter targets BB’s sidebar navigation row and
 leaves its options menu and modified clicks to BB.

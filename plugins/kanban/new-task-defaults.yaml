@@ -1,7 +1,4 @@
 provider: codex
 model: gpt-6.1-sol
-reasoning: medium
-# Match the checkout, so renaming the project does not remove the exception.
-projectCheckoutPaths:
-  - ~/Obsidian
-  - ~/Projects/Personal/bb-plugins
+reasoning: high
+environmentProvider: project-checkout

@@ -23,7 +23,7 @@ test("global New thread selects personal, preserves other buttons, and disposes 
   // A destination mounted after navigation must still receive the sidebar choice.
   const banner = app.composerCustomizations.find(item => item.id === "new-thread-agent-defaults")!.banners![0];
   const composer = renderSlot(banner, {}, { composer: { scope: { kind: "new-thread", projectId: "personal" } } });
-  const sol = { providerId: "codex", model: "gpt-6-sol", reasoningLevel: "medium" };
+  const sol = { providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high" };
   await waitFor(() => expect(composer.inspection.composer.selections).toEqual([sol]));
   // The same button also resets an already open composer.
   fireEvent.click(row.firstElementChild!);
@@ -37,14 +37,14 @@ test("global New thread selects personal, preserves other buttons, and disposes 
   expect(nativeClick).toHaveBeenCalledTimes(3);
 });
 
-test("new task defaults use Astra Medium without changing project, permission, or service tier", async () => {
+test("new task defaults use GPT-6.1-Sol High without changing project, permission, or service tier", async () => {
   const app = await loadPluginApp(() => import("./app"));
   const customization = app.composerCustomizations.find(item => item.id === "new-thread-agent-defaults")!;
   expect(customization.scopes).toEqual(["new-thread"]);
   const slot = renderSlot(customization.banners![0], {}, {
     composer: { scope: { kind: "new-thread", projectId: "chosen-project" } },
   });
-  const expected = { providerId: "codex", model: "gpt-6-astra", reasoningLevel: "medium" };
+  const expected = { providerId: "codex", model: "gpt-6.1-sol", reasoningLevel: "high" };
   await waitFor(() => expect(slot.inspection.composer.selections).toEqual([expected]));
   await slot.behavior.setComposerText("Keep my draft");
   expect(slot.inspection.composer.selections).toHaveLength(1);
