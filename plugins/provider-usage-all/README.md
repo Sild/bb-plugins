@@ -4,6 +4,8 @@ Local replacement for the built-in provider usage footer presentation. Keep the 
 
 The built-in footer is hidden through `sidebar.hiddenFooterItems`; its backend and settings page remain available. The custom footer has no provider tabs. It retains a machine/source selector for multiple hosts or shared sources.
 
+The expanded panel closes when you click outside it or use its collapse button. Clicking inside the panel keeps it open.
+
 Validation: `npm test`, `npm run typecheck`, `bb plugin build .`.
 
 Compatibility: built against BB SDK 0.5.29 and the built-in provider-usage `getUsage` contract. Schema changes fail visibly. Recheck this contract after BB upgrades.
