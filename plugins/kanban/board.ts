@@ -61,7 +61,7 @@ export interface ProjectGroups {
 export function projectFolders(projects: BoardProject[], state: ProjectGroups | null): ProjectFolder[] {
   const ordinary = projects.filter((project) => !project.isPersonal);
   const pinned = state?.pinnedProjectIds.filter((id) => ordinary.some((project) => project.id === id)) ?? [];
-  const assigned = new Set(pinned);
+  const assigned = new Set<string>();
   const folders: ProjectFolder[] = [];
   if (pinned.length) folders.push({ id: "pinned", name: "Pinned", sign: "", iconName: "Star", iconColor: null, projectIds: pinned });
   for (const group of [...(state?.groups ?? [])].sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))) {

@@ -67,8 +67,13 @@ function Board() {
   const allVisibleCards = data?.cards.filter((card) => visibleIds.has(card.projectId) && (showArchive || card.column !== "archived")) ?? [];
   const visibleCards = parentOnly ? allVisibleCards.filter((card) => !card.parentThreadId) : allVisibleCards;
   const projectsWithCards = new Set(visibleCards.map((card) => card.projectId));
+  const renderedProjects = new Set<string>();
   const projects = data?.folders.flatMap((folder) => folder.projectIds.map((id) => ({ project: data.projects.find((project) => project.id === id), folder })))
-    .filter((row) => row.project && projectsWithCards.has(row.project.id)) ?? [];
+    .filter((row) => {
+      if (!row.project || !projectsWithCards.has(row.project.id) || renderedProjects.has(row.project.id)) return false;
+      renderedProjects.add(row.project.id);
+      return true;
+    }) ?? [];
 
   return <div data-kanban-board="" className="h-full min-h-0 overflow-auto p-4 md:p-6">
     {acceptAll && <AcceptAllDialog {...acceptAll} close={() => setAcceptAll(null)} refresh={() => void refresh()} />}

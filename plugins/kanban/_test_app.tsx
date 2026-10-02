@@ -405,3 +405,21 @@ test("storage failure keeps display controls usable and reports that the choice 
   expect(window.localStorage.getItem("bb:kanban:board:showLinks")).toBeNull();
   slot.lifecycle.unmount();
 });
+
+test("pinned projects appear in both filter sections while cards render once", async () => {
+  const board = {...initial, folders: [
+    {id: "pinned", name: "Pinned", projectIds: ["p1"], sign: "", iconName: "Star", iconColor: null},
+    ...initial.folders,
+  ]};
+  const slot = await mount({board_list: input => subset(selectedIds(input), board)});
+  expect(screen.getAllByRole("region", {name: "Project Alpha"})).toHaveLength(1);
+  expect(screen.getAllByRole("article", {name: "Alpha task"})).toHaveLength(1);
+  fireEvent.click(screen.getByLabelText("Filter by projects"));
+  const checkboxes = screen.getAllByRole("checkbox", {name: "Show project Alpha"}) as HTMLInputElement[];
+  expect(checkboxes).toHaveLength(2);
+  expect(checkboxes.every(box => box.checked)).toBe(true);
+  fireEvent.click(checkboxes[1]);
+  await waitFor(() => expect(screen.queryByRole("region", {name: "Project Alpha"})).toBeNull());
+  expect((screen.getAllByRole("checkbox", {name: "Show project Alpha"}) as HTMLInputElement[]).every(box => !box.checked)).toBe(true);
+  slot.lifecycle.unmount();
+});

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { experimental_useSidebarThreads, useRealtime, useRpc } from "@get-bb/plugin-sdk/app";
-import type { ProjectGroup, rpcContract } from "./server";
+import type { GroupState, ProjectGroup, rpcContract } from "./server";
 import { GroupMark, type Appearance } from "./IconPicker";
 
 import { SectionEditor } from "./SectionEditor";
 import { usePortalScopeProps } from "./lib/portal-scope";
 
-type GroupState = { groups: ProjectGroup[]; assignments: Record<string, string>; pinnedProjectIds: string[] };
 
 
 function FolderSetting({ projectId }: { projectId: string }) {

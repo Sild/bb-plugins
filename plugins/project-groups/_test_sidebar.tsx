@@ -17,7 +17,7 @@ const projects = [
 test("icon picker exposes scoped SVG icons, search, and selection", async () => {
   const change = vi.fn();
   render(<IconPicker value={{sign: "", iconName: null, iconColor: "#38c878"}} onChange={change} />);
-  await userEvent.click(screen.getByRole("button", { name: "Choose section icon" }));
+  await userEvent.click(screen.getByRole("button", { name: "Choose folder icon" }));
   const folder = screen.getByRole("button", { name: "Folder", exact: true });
   expect(folder.querySelector("svg")?.getAttribute("width")).toBe("20");
   expect(folder.closest('[data-bb-plugin="project-groups"]')).not.toBeNull();
@@ -61,16 +61,16 @@ test("defaults are last, project pin returns to its folder, and deletion is expl
   expect(screen.getAllByRole("heading").map(e => e.textContent)).toEqual(["Other threads"]);
   await userEvent.click(screen.getByRole("button", {name: "Project options for Example"}));
   await userEvent.click(screen.getByRole("menuitem", {name: "Pin project"}));
-  expect(screen.getByRole("link", {name: /Example/}).closest("section")?.textContent).toContain("Pinned");
-  await userEvent.click(screen.getByRole("button", {name: "Project options for Example"}));
+  expect(screen.getAllByRole("link", {name: /Example/}).map(link => link.closest("section")?.textContent)).toEqual([expect.stringContaining("Pinned"), expect.stringContaining("Work")]);
+  await userEvent.click(screen.getAllByRole("button", {name: "Project options for Example"})[1]);
   await userEvent.click(screen.getByRole("menuitem", {name: "Unpin project"}));
   expect(screen.getByRole("link", {name: /Example/}).closest("section")?.textContent).toContain("Work");
-  await userEvent.click(screen.getByRole("button", {name: "Section options for Work"}));
-  await userEvent.click(screen.getByRole("menuitem", {name: "Delete section…"}));
+  await userEvent.click(screen.getByRole("button", {name: "Folder options for Work"}));
+  await userEvent.click(screen.getByRole("menuitem", {name: "Delete folder…"}));
   const dialog = await screen.findByRole("dialog");
   expect(dialog.textContent).toContain("Your projects and threads will be kept");
   expect(deleted).not.toHaveBeenCalled();
-  await userEvent.click(within(dialog).getByRole("button", {name: "Delete section", exact: true}));
+  await userEvent.click(within(dialog).getByRole("button", {name: "Delete folder", exact: true}));
   expect(deleted).toHaveBeenCalled();
   expect(screen.getByRole("link", {name: /Example/}).closest("section")?.textContent).toContain("Other projects");
   slot.lifecycle.unmount();
@@ -116,7 +116,7 @@ test("retry after assignment failure reuses the section already created", async 
     rpc: {groups_list: () => state, groups_create: create, groups_update: () => state, groups_assign: assign},
   });
   await userEvent.click(await screen.findByRole("button", {name: "New folder"}));
-  await userEvent.type(screen.getByRole("textbox", {name: "Section name"}), "Work");
+  await userEvent.type(screen.getByRole("textbox", {name: "Folder name"}), "Work");
   await userEvent.click(screen.getByRole("button", {name: "Save", exact: true}));
   await screen.findByText("Could not save the change. Please try again.");
   await userEvent.click(screen.getByRole("button", {name: "Save", exact: true}));

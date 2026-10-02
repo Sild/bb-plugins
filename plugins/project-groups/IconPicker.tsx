@@ -46,7 +46,7 @@ export function IconPicker({ value, onChange }: { value: Appearance; onChange: (
       <Popover.Trigger asChild>
       <button type="button"
         className="flex size-9 items-center justify-center rounded-md border border-border bg-background text-lg hover:bg-accent"
-        aria-label="Choose section icon" aria-expanded={open}>
+        aria-label="Choose folder icon" aria-expanded={open}>
         {value.sign || value.iconName
           ? <GroupMark value={value} className={value.iconName ? "size-5" : ""} />
           : <span className="text-sm text-muted-foreground">+</span>}
