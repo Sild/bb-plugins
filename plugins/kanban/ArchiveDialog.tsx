@@ -15,9 +15,10 @@ export function ArchiveDialog({scope, label, close, refresh}: {scope: ArchiveSco
     setPending(true); setError(null);
     try {
       const result = await rpc.call("board_archive", scope);
-      setResult(`${result.archived} archived. ${result.failed} could not be archived.`);
-      if (result.failed) setError(result.failures.map(f => `${f.threadId}: ${f.reason}`).join("\n"));
       refresh();
+      if (!result.failed) { close(); return; }
+      setResult(`${result.archived} archived. ${result.failed} could not be archived.`);
+      setError(result.failures.map(f => `${f.threadId}: ${f.reason}`).join("\n"));
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setPending(false); }
   };

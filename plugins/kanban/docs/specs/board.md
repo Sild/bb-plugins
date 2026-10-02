@@ -58,7 +58,9 @@ Archive all project tasks choices. The latter includes hidden and running tasks.
 No archive controls occupy separate rows beneath column headings or card stacks. Menu labels, tooltips,
 and keyboard support keep the compact icon discoverable and its scope explicit. A modal identifies the scope, explains stopping/environment effects,
 and allows cancellation. Execution uses freshly queried tasks, paginates beyond the
-500-card display limit, calls the host archive API, and reports successes and failures.
+500-card display limit and calls the host archive API. The board refreshes after execution;
+the modal closes automatically when every task archives successfully, including when no
+tasks remain eligible. Partial failures keep the modal open with counts and reasons.
 It accepts completed review subthreads automatically after Review and Implement delivers their feedback. Ordinary tasks still require user acceptance.
 
 The installed SDK's archive action recursively archives child, lifecycle-dependent,

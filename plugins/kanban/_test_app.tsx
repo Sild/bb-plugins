@@ -308,11 +308,16 @@ test("archive toggle and time frame add a sorted sixth column and hide it immedi
   slot.lifecycle.unmount();
 });
 
-test("archive buttons confirm the correct selection and report partial failure", async () => {
+test("archive buttons confirm the correct selection, report partial failure, and close after success", async () => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {configurable: true, value: function(this: HTMLDialogElement) {this.setAttribute("open", "");}});
   Object.defineProperty(HTMLDialogElement.prototype, "close", {configurable: true, value: function(this: HTMLDialogElement) {this.removeAttribute("open");}});
   const calls: unknown[] = [];
-  const slot = await mount({board_archive: input => {calls.push(input); return {archived: 2, failed: 1, failures: [{threadId: "t1", reason: "Task changed"}]};}});
+  const slot = await mount({board_archive: input => {
+    calls.push(input);
+    return calls.length === 1
+      ? {archived: 2, failed: 1, failures: [{threadId: "t1", reason: "Task changed"}]}
+      : {archived: 2, failed: 0, failures: []};
+  }});
   fireEvent.click(screen.getByRole("button", {name: "Archive all accepted tasks"}));
   expect(calls).toHaveLength(0);
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", {name: "Cancel"}));
@@ -329,6 +334,8 @@ test("archive buttons confirm the correct selection and report partial failure",
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", {name: "Archive all"}));
   await waitFor(() => expect(calls).toHaveLength(2));
   expect(calls[1]).toEqual({kind: "accepted", projectIds: ["p1"]});
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(slot.inspection.rpcCalls.filter(call => call.method === "board_list")).toHaveLength(3);
   slot.lifecycle.unmount();
   Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
   Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
