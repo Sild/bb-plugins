@@ -337,7 +337,7 @@
       }
     },
     {
-      "command": "app.back",
+      "command": "plugin:kanban/open-board",
       "shortcut": {
         "key": "D",
         "mod": true,

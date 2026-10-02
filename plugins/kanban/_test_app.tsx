@@ -4,8 +4,8 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { loadPluginApp, renderSlot } from "@get-bb/plugin-sdk/testing/app";
 import { rpcContract, type BoardData } from "./server";
 
-beforeEach(() => window.localStorage.clear());
-afterEach(() => { cleanup(); vi.restoreAllMocks(); window.localStorage.clear(); });
+beforeEach(() => { window.localStorage.clear(); window.sessionStorage.clear(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); window.localStorage.clear(); window.sessionStorage.clear(); });
 const initial: BoardData = {
   projects: [
     { id: "p1", name: "Alpha", isPersonal: false },
@@ -422,4 +422,42 @@ test("pinned projects appear in both filter sections while cards render once", a
   await waitFor(() => expect(screen.queryByRole("region", {name: "Project Alpha"})).toBeNull());
   expect((screen.getAllByRole("checkbox", {name: "Show project Alpha"}) as HTMLInputElement[]).every(box => !box.checked)).toBe(true);
   slot.lifecycle.unmount();
+});
+
+test("returning to the board restores location and selections after asynchronous loading", async () => {
+  const slot = await mount();
+  fireEvent.click(screen.getByLabelText("Filter by projects"));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Show project Beta" }));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Project Beta" })).toBeNull());
+  fireEvent.click(screen.getByRole("button", { name: "Collapse project Alpha" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Show archive" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Archive time frame" }), { target: { value: "30" } });
+  const board = slot.container.querySelector<HTMLDivElement>("[data-kanban-board]")!;
+  board.scrollTop = 680;
+  board.scrollLeft = 140;
+  fireEvent.scroll(board);
+  slot.lifecycle.unmount();
+
+  let resolve!: (value: BoardData) => void;
+  const app = await loadPluginApp(() => import("./app"));
+  const returned = renderSlot(app.navPanels[0], { subPath: "" }, { pluginId: "kanban", rpc: {
+    board_list: input => new Promise<BoardData>(done => { resolve = () => done(subset(selectedIds(input))); }),
+  } });
+  const restored = returned.container.querySelector<HTMLDivElement>("[data-kanban-board]")!;
+  expect(restored.scrollTop).toBe(0);
+  await waitFor(() => expect(resolve).toBeTypeOf("function"));
+  await act(async () => resolve(initial));
+  expect(restored.scrollTop).toBe(680);
+  expect(restored.scrollLeft).toBe(140);
+  expect(screen.queryByRole("region", { name: "Project Beta" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Expand project Alpha" })).toBeTruthy();
+  expect((screen.getByRole("combobox", { name: "Archive time frame" }) as HTMLSelectElement).value).toBe("30");
+  returned.lifecycle.unmount();
+});
+
+test("malformed board session state falls back to the default view", async () => {
+  window.sessionStorage.setItem("bb:kanban:board:view", JSON.stringify({ top: -10, projectIds: "wrong" }));
+  const slot = await mount();
+  expect(screen.getByRole("region", { name: "Project Beta" })).toBeTruthy();
+  expect(slot.container.querySelector("[data-kanban-board]")!.scrollTop).toBe(0);
 });

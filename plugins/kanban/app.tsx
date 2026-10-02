@@ -16,23 +16,27 @@ import { ArchiveDialog } from "./ArchiveDialog";
 import { SaveDraftAction } from "./SaveDraftAction";
 import type { ArchiveScope } from "./archive";
 import { useBoardPreference } from "./useBoardPreference";
+import { BoardNavigation, openBoardCommand } from "./BoardNavigation";
+import { useBoardView } from "./useBoardView";
 import { mountAgentPickerFocus } from "./AgentPickerFocus";
 
 function Board() {
   const rpc = useRpc<typeof rpcContract>();
   const threadActions = experimental_useSidebarThreadActions();
   const [showArchive, setShowArchive, archivePreferenceError] = useBoardPreference("showArchive", false);
-  const [archiveDays, setArchiveDays] = useState<1 | 7 | 14 | 30 | 90 | 180 | 365>(7);
   const [archive, setArchive] = useState<{scope: ArchiveScope; label: string} | null>(null);
   const [acceptAll, setAcceptAll] = useState<{projectIds: string[] | null; label: string} | null>(null);
   const shownColumns = showArchive ? [...columns, archivedColumn] : columns;
   const [showLinks, setShowLinks, linksPreferenceError] = useBoardPreference("showLinks", true);
   const [parentOnly, setParentOnly, parentPreferenceError] = useBoardPreference("parentOnly", false);
   const preferenceError = archivePreferenceError || linksPreferenceError || parentPreferenceError;
-  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => new Set());
   const connection = useRealtimeConnectionState();
-  const [projectIds, setProjectIds] = useState<string[] | null>(null);
   const [data, setData] = useState<BoardData | null>(null);
+  const { root, view, setView, save } = useBoardView(data !== null);
+  const { projectIds, archiveDays } = view;
+  const collapsedProjects = new Set(view.collapsedProjects);
+  const setProjectIds = (projectIds: string[] | null) => setView(current => ({ ...current, projectIds }));
+  const setArchiveDays = (archiveDays: typeof view.archiveDays) => setView(current => ({ ...current, archiveDays }));
   const [loadError, setLoadError] = useState<string | null>(null);
   const request = useRef(0);
   const refresh = useCallback(async () => {
@@ -75,7 +79,7 @@ function Board() {
       return true;
     }) ?? [];
 
-  return <div data-kanban-board="" className="h-full min-h-0 overflow-auto p-4 md:p-6">
+  return <div ref={root} onScroll={save} onClickCapture={save} data-kanban-board="" className="h-full min-h-0 overflow-auto p-4 md:p-6">
     {acceptAll && <AcceptAllDialog {...acceptAll} close={() => setAcceptAll(null)} refresh={() => void refresh()} />}
     {archive && <ArchiveDialog {...archive} close={() => setArchive(null)} refresh={() => void refresh()} />}
     <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
@@ -116,10 +120,10 @@ function Board() {
         {projects.map(({ project, folder }) => project && <section key={project.id} aria-label={`Project ${project.name}`} className="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
           <div role="group" aria-label={`Project header for ${project.name}`} className={`grid items-center bg-muted/40 py-2.5 ${collapsedProjects.has(project.id) ? "" : "border-b border-border"}`} style={{gridTemplateColumns: `repeat(${shownColumns.length}, minmax(0, 1fr))`}}>
             <div className="col-span-3 flex min-w-0 items-center gap-2 pl-3">
-              <button type="button" aria-label={`${collapsedProjects.has(project.id) ? "Expand" : "Collapse"} project ${project.name}`} aria-expanded={!collapsedProjects.has(project.id)} onClick={() => setCollapsedProjects((current) => {
-                const next = new Set(current);
+              <button type="button" aria-label={`${collapsedProjects.has(project.id) ? "Expand" : "Collapse"} project ${project.name}`} aria-expanded={!collapsedProjects.has(project.id)} onClick={() => setView((current) => {
+                const next = new Set(current.collapsedProjects);
                 if (next.has(project.id)) next.delete(project.id); else next.add(project.id);
-                return next;
+                return { ...current, collapsedProjects: [...next] };
               })} className="flex min-w-0 items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <span aria-hidden className={`text-xs text-muted-foreground transition-transform ${collapsedProjects.has(project.id) ? "-rotate-90" : ""}`}>▾</span>
                 <h3 className="truncate text-sm font-semibold">{project.name}</h3>
@@ -144,6 +148,8 @@ function Board() {
 }
 
 export default definePluginApp((app) => {
+  app.commands.register(openBoardCommand);
+  app.slots.experimental_appOverlay({ id: "board-navigation", component: BoardNavigation });
   app.contentScripts.register({ id: "agent-picker-focus", mount: mountAgentPickerFocus });
   app.slots.experimental_threadHeaderAction({ id: "thread-actions", title: "Thread shortcuts", component: ThreadActions });
   app.composer.customize({ id: "kanban-acceptance", scopes: ["thread"], banners: [{ id: "acceptance", chrome: "bare", component: ThreadAcceptance }] });
