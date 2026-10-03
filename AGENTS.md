@@ -7,3 +7,5 @@
 - For collection/preset changes: preview `python3 scripts/restore.py`, check JSON, and exercise restoration on a disposable BB instance. Never use the personal instance as a test fixture.
 - Run `git diff --check` before committing. Keep credentials, databases, installed dependencies, and generated bundles out of Git.
 - For sync changes: `python3 -m unittest discover -s scripts -p '_test_*.py'`; check the automatic-capture contract in the installation spec. Never commit `.bb/plugin-sync-state/`.
+
+- Task completion leaves changes uncommitted for review. Validate and stage only task-owned hunks, then use `bb kanban report done --commit-message "scope: summary"`. User Accept commits the prepared staged snapshot. Read-only tasks report Done without a commit message. Commit earlier only when explicitly requested.

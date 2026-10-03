@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { cleanupBranch, inspectGit, mergeTarget, mergeWorktree, verifyMerge } from "./git";
+import { commitStaged, stagedSnapshot, cleanupBranch, inspectGit, mergeTarget, mergeWorktree, verifyMerge } from "./git";
 import { createTaskWorktree, removeTaskWorktree } from "./task-worktree";
 
 const exec = promisify(execFile);
@@ -111,4 +111,57 @@ test("task creation never adopts a pre-existing suggested branch", async () => {
   const head = await git(checkout, "rev-parse", "bb/existing-task");
   await expect(createTaskWorktree(join(checkout, "..", "plugin-data"), { checkout, pathKey: "collision", branch: "bb/existing-task" })).rejects.toThrow("already exists");
   expect(await git(checkout, "rev-parse", "bb/existing-task")).toBe(head);
+});
+
+test("Accept commits only the prepared staged tree, preserves unstaged work and retries without duplicate commits", async () => {
+  const { checkout, git } = await repository();
+  const before = await git(checkout, "rev-parse", "HEAD");
+  await writeFile(join(checkout, "owned"), "task\n");
+  await git(checkout, "add", "owned");
+  await writeFile(join(checkout, "file"), "unrelated edit\n");
+  const snapshot = await stagedSnapshot(checkout);
+  expect(await git(checkout, "rev-parse", "HEAD")).toBe(before);
+  expect(await git(checkout, "diff", "HEAD", "--stat")).toContain("owned");
+  const commit = await commitStaged(checkout, snapshot, "task: reviewed changes");
+  expect(await git(checkout, "show", "--format=", "--name-only", commit)).toBe("owned");
+  expect(await git(checkout, "diff", "--name-only")).toBe("file");
+  expect(await git(checkout, "diff", "--cached", "--name-only")).toBe("");
+  expect(await commitStaged(checkout, snapshot, "task: reviewed changes")).toBe(commit);
+});
+test.each(["index", "head", "branch"])("Accept rejects %s drift since Done without committing", async drift => {
+  const { checkout, git } = await repository();
+  await writeFile(join(checkout, "owned"), "task\n"); await git(checkout, "add", "owned");
+  const snapshot = await stagedSnapshot(checkout);
+  if (drift === "index") { await writeFile(join(checkout, "other"), "other\n"); await git(checkout, "add", "other"); }
+  if (drift === "head") await git(checkout, "commit", "--allow-empty", "--only", "-m", "other task");
+  if (drift === "branch") await git(checkout, "switch", "-c", "other-branch");
+  const before = await git(checkout, "rev-parse", "HEAD");
+  await expect(commitStaged(checkout, snapshot, "task: changes")).rejects.toThrow("since Done");
+  expect(await git(checkout, "rev-parse", "HEAD")).toBe(before);
+});
+test("No-change tasks do not prepare an empty commit; failing commit hooks leave acceptance incomplete", async () => {
+  const { checkout, git } = await repository();
+  await expect(stagedSnapshot(checkout)).rejects.toThrow("No staged task changes");
+  await writeFile(join(checkout, "owned"), "task\n"); await git(checkout, "add", "owned");
+  const snapshot = await stagedSnapshot(checkout);
+  const hooks = await git(checkout, "rev-parse", "--git-path", "hooks");
+  const hook = join(checkout, hooks, "pre-commit");
+  await writeFile(hook, "#!/bin/sh\nexit 1\n"); await chmod(hook, 0o755);
+  await expect(commitStaged(checkout, snapshot, "task: changes")).rejects.toThrow();
+  expect(await git(checkout, "rev-parse", "HEAD")).toBe(snapshot.head);
+  expect(await git(checkout, "diff", "--cached", "--name-only")).toBe("owned");
+});
+
+test.each(["tree", "branch"])("Rejects a hook changing the %s before publishing an acceptance commit", async change => {
+  const { checkout, git } = await repository();
+  await writeFile(join(checkout, "owned"), "task\n"); await git(checkout, "add", "owned");
+  const snapshot = await stagedSnapshot(checkout);
+  await writeFile(join(checkout, "extra"), "unreviewed\n");
+  await git(checkout, "branch", "other");
+  const hook = join(checkout, await git(checkout, "rev-parse", "--git-path", "hooks"), "pre-commit");
+  await writeFile(hook, change === "tree" ? "#!/bin/sh\ngit add extra\n" : "#!/bin/sh\ngit symbolic-ref HEAD refs/heads/other\n"); await chmod(hook, 0o755);
+  await expect(commitStaged(checkout, snapshot, "task: changes")).rejects.toThrow("changed");
+  expect(await git(checkout, "rev-parse", "refs/heads/" + snapshot.branch)).toBe(snapshot.head);
+  expect(await git(checkout, "rev-parse", "refs/heads/other")).toBe(snapshot.head);
+  expect(await git(checkout, "write-tree")).toBe(snapshot.tree);
 });

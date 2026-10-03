@@ -9,9 +9,15 @@ Runtime determines Backlog, Active, and structured Waiting. Idle alone does not 
 
 Before your final handoff, report the semantic outcome for your current thread:
 
-For Git tasks, validate and commit task-owned changes before reporting Done. Preserve
-unrelated changes; a clean worktree with no changes needs no empty commit. The Done
-command rejects a dirty Git workspace or an unfinished Git operation.
+For Git tasks, validate and self-review, stage only task-owned hunks, then run
+`bb kanban report done --commit-message "scope: summary"`. Done captures the staged
+Git tree, HEAD and branch without committing. Leave the diff uncommitted for user
+review. Accept commits that snapshot and then lands managed worktrees when needed.
+Changed HEAD, branch or staged contents require a new review and Done report.
+Preserve unrelated staged and unstaged work. If pre-existing staged ownership is
+ambiguous, ask rather than include it. Read-only/no-change tasks use ordinary
+`bb kanban report done` and create no commit. Do not commit before Accept unless
+explicitly requested. Finish Git operations before Done. Agents never accept work.
 
 New Git project tasks in the native composer default to Project checkout on the
 current active local branch with GPT-6.1-Sol High. Do not create or switch branches

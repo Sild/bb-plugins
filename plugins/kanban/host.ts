@@ -1,9 +1,11 @@
 import { experimental_defineHostEntry } from "@get-bb/plugin-sdk";
 import { gitContract } from "./git-contract";
-import { cleanupBranch, inspectGit, mergeTarget, mergeWorktree, verifyMerge } from "./git";
+import { commitStaged, stagedSnapshot, cleanupBranch, inspectGit, mergeTarget, mergeWorktree, verifyMerge } from "./git";
 import { createTaskWorktree, removeTaskWorktree, taskWorktreePath } from "./task-worktree";
 
 export default experimental_defineHostEntry({ contract: gitContract, handlers: {
+  stagedSnapshot: ({ path }, { signal }) => stagedSnapshot(path, signal),
+  commitStaged: ({ path, snapshot, message }, { signal }) => commitStaged(path, snapshot, message, signal),
   worktreePath: ({ pathKey }, context) => taskWorktreePath(context.experimental_paths.dataDir, pathKey),
   createWorktree: (input, context) => createTaskWorktree(context.experimental_paths.dataDir, input, context.signal),
   removeWorktree: (input, context) => removeTaskWorktree(context.experimental_paths.dataDir, input, context.signal),

@@ -74,7 +74,7 @@ export function mergeWorkflow(bb: BbPluginApi, changed: (threadId: string) => vo
     const environment = await bb.sdk.environments.get({ environmentId: thread.environmentId });
     if (!environment.isGitRepo || !environment.path || environment.status === "destroyed") return;
     const state = await host.call("inspect", { path: environment.path }, { hostId: environment.hostId });
-    if (!state.clean || state.operation) throw new Error("Commit task-owned changes and finish Git operations before reporting Done. Do not commit unrelated changes.");
+    if (state.operation) throw new Error("Finish Git operations before reporting Done.");
   }
   async function prompt(job: Job) {
     await bb.sdk.threads.send({ threadId: job.threadId, mode: "queue-if-active", input: [{ type: "text", mentions: [], text:

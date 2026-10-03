@@ -6,7 +6,7 @@ This repository preserves the five custom plugins and portable BB preferences fr
 
 `.bb/plugins.json` indexes `plugins/<id>` using BB's collection schema. Each directory has its own package manifest, source, lockfile, tests, documentation, and skill files. The collection does not override package identity. Plugins install separately with `--plugin <id>`; the root is not a single plugin.
 
-The source snapshot contains Project Groups, Kanban, Question Inbox, Review and Implement, and Provider Usage All. Existing workflow YAML remains authoritative for model, reasoning, prompts, and review orchestration. New Git tasks use Project checkout on the current active local branch and GPT-6.1-Sol High. Design/Plan use Astra Extra High; fresh Review sessions use Claude High when quota is available, otherwise Astra High; fresh Implement sessions use GPT-6.1-Sol High. Design/Plan artifacts include a self-contained handoff. Task-owned changes must be validated and committed before Done.
+The source snapshot contains Project Groups, Kanban, Question Inbox, Review and Implement, and Provider Usage All. Existing workflow YAML remains authoritative for model, reasoning, prompts, and review orchestration. New Git tasks use Project checkout on the current active local branch and GPT-6.1-Sol High. Design/Plan use Astra Extra High; fresh Review sessions use Claude High when quota is available, otherwise Astra High; fresh Implement sessions use GPT-6.1-Sol High. Design/Plan artifacts include a self-contained handoff. Task-owned changes must be validated and staged before Done using `bb kanban report done --commit-message "scope: summary"`; they remain uncommitted for review until user Accept commits the captured staged snapshot.
 
 ## Restore
 

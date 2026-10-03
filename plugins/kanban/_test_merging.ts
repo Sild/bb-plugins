@@ -14,6 +14,8 @@ function setup() {
   const { bb, harness } = createFakePluginHost({ pluginId: "kanban", agentSkillIds: ["kanban-board"],
     experimental_callHostRpc: async ({ method }) => {
       calls.push(method);
+      if (method === "stagedSnapshot") return { branch: "task", head: "a".repeat(40), tree: "b".repeat(40) };
+      if (method === "commitStaged") { clean = true; return "c".repeat(40); }
       if (method === "inspect") return { isGit: true, branch: "target", clean, operation: false };
       if (method === "target") return { checkout: "/checkout", worktree: "/task", branch: "target", taskBranch: "task", taskHead: "a".repeat(40) };
       if (method === "merge") return { status: mergeStatus, message: mergeMessage };
@@ -35,10 +37,10 @@ function setup() {
   plugin(bb); dispose.push(() => harness.lifecycle.dispose());
   return { bb, harness, thread, environment, metadata, calls, setVerified: (value: boolean) => { verified = value; }, setClean: (value: boolean) => { clean = value; }, setMerge: (value: string, message = "conflicts") => { mergeStatus = value; mergeMessage = message; }, setCleanupFailure: (value: boolean) => { failCleanup = value; } };
 }
-test("Done rejects uncommitted changes without writing a completion report", async () => {
+test("Done permits uncommitted changes without creating a commit", async () => {
   const ctx = setup(); ctx.setClean(false); delete ctx.metadata.outcome;
-  expect(await ctx.harness.behavior.runCli(["report", "done"], { threadId: "t1" })).toMatchObject({ exitCode: 1 });
-  expect(ctx.metadata.outcome).toBeUndefined(); expect(ctx.calls).toEqual(["inspect"]);
+  expect(await ctx.harness.behavior.runCli(["report", "done"], { threadId: "t1" })).toMatchObject({ exitCode: 0 });
+  expect(ctx.metadata.outcome).toBe("done"); expect(ctx.calls).toEqual(["inspect"]);
 });
 test("Accept merges and verifies while retaining the unarchived task workspace", async () => {
   const ctx = setup();
@@ -201,14 +203,27 @@ test("bulk Accept preserves Git validation and reports merges still in progress"
   const ctx = setup();
   const input = { projectIds: ["p1"], revisions: [{ threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt }] };
   ctx.setClean(false);
-  expect(await ctx.harness.behavior.callRpc("board_accept_all", input)).toMatchObject({ accepted: 0, merging: 0, failed: 1, failures: [{ threadId: "t1", reason: expect.stringContaining("Commit task-owned changes") }] });
-  expect(ctx.metadata.acceptedFor).toBeUndefined();
-  expect(ctx.calls).toEqual(["inspect"]);
-  ctx.setClean(true);
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: changes"], { threadId: "t1" });
   ctx.setMerge("blocked", "Another task is merging into this checkout. Retry after it finishes.");
   expect(await ctx.harness.behavior.callRpc("board_accept_all", input)).toMatchObject({ accepted: 0, merging: 1, failed: 0 });
   ctx.setMerge("merged");
   await ctx.harness.behavior.runSchedule("continue-merges");
   expect(await ctx.harness.behavior.callRpc("board_thread", { threadId: "t1" })).toMatchObject({ column: "accepted" });
   expect(ctx.calls).not.toContain("delete");
+});
+
+test("Done prepares staged changes, then checkout Accept commits without merging", async () => {
+  const ctx = setup(); ctx.environment.isWorktree = false; ctx.setClean(false);
+  expect(await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: reviewed changes"], { threadId: "t1" })).toMatchObject({ exitCode: 0 });
+  expect(ctx.calls).toEqual(["inspect", "stagedSnapshot"]);
+  expect(ctx.metadata.stagedAcceptance).toMatchObject({ message: "task: reviewed changes", snapshot: { branch: "task" } });
+  expect(await ctx.harness.behavior.callRpc("board_accept", { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt })).toMatchObject({ column: "accepted" });
+  expect(ctx.calls).toEqual(["inspect", "stagedSnapshot", "inspect", "commitStaged"]);
+});
+test("worktree Accept commits prepared changes before capturing and merging the task HEAD", async () => {
+  const ctx = setup(); ctx.setClean(false);
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: changes"], { threadId: "t1" });
+  await ctx.harness.behavior.callRpc("board_accept", { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt });
+  expect(ctx.calls.indexOf("commitStaged")).toBeLessThan(ctx.calls.indexOf("target"));
+  expect(ctx.calls.indexOf("commitStaged")).toBeLessThan(ctx.calls.indexOf("merge"));
 });

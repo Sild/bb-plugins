@@ -1,3 +1,4 @@
+import { stagedSnapshotSchema } from "./git-contract";
 import { workflowParent } from "./workflow-parent";
 import { cliCommand, defineCli, defineRpcContract, PluginCliError, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
@@ -209,6 +210,15 @@ export default function plugin(bb: BbPluginApi) {
     if (card.column !== "done") throw new Error("Only a Done thread can be accepted. Refresh to see its current status.");
     if (card.updatedAt !== expectedUpdatedAt && !acknowledgeChanges) return { ...card, reviewRequired: true };
     await merges.checkDone(threadId);
+    const metadata = await bb.sdk.threads.getPluginMetadata({ threadId });
+    if (metadata.stagedAcceptance) {
+      const prepared = z.object({ environmentId: z.string(), path: z.string(), message: z.string(), snapshot: stagedSnapshotSchema }).parse(metadata.stagedAcceptance);
+      const thread = await bb.sdk.threads.get({ threadId });
+      if (thread.environmentId !== prepared.environmentId) throw new Error("The task environment changed since Done. Review and report Done again.");
+      const environment = await bb.sdk.environments.get({ environmentId: prepared.environmentId });
+      if (environment.path !== prepared.path || environment.status !== "ready") throw new Error("The task checkout is unavailable or changed since Done.");
+      await merges.host.call("commitStaged", { path: prepared.path, snapshot: prepared.snapshot, message: prepared.message }, { hostId: environment.hostId, timeoutMs: 180_000 });
+    }
     if (await merges.begin(threadId)) return threadCard(threadId);
     await bb.sdk.threads.updatePluginMetadata({ threadId, set: { acceptedFor: card.updatedAt, acceptedAt: Date.now() } });
     bb.realtime.publish(CHANGED, { threadId });
@@ -290,7 +300,7 @@ export default function plugin(bb: BbPluginApi) {
 
   bb.agents.configure(() => ({
     tools: [], skills: ["kanban-board"],
-    instructions: "For Git tasks, validate and commit task-owned changes before reporting Done; preserve unrelated changes. A clean worktree with no changes needs no empty commit. Accept authorizes the plugin to merge and clean up; never accept work yourself. Before ending each turn, report your task outcome with the bb CLI. Run `bb kanban report done` when your assigned work is complete, including a review whose findings have been delivered to its parent. Findings, recommendations, or future work for someone else do not make a completed review Waiting. Run `bb kanban report waiting` only when your own task needs user input to proceed. Waiting for a running subtask remains Active. Do not omit the outcome report: idle alone cannot distinguish completion from an unanswered question. Never accept work on the user's behalf.",
+    instructions: "For Git tasks, validate and self-review, then stage only task-owned hunks and report Done with `bb kanban report done --commit-message \"scope: summary\"`. Leave changes uncommitted for review; the user clicking Accept authorizes the plugin to commit the captured staged changes, then merge a managed worktree if applicable. Preserve unrelated staged and unstaged changes; if ownership of existing staged changes is ambiguous, ask rather than include them. Read-only/no-change tasks report Done without a commit message and create no commit. Never commit before Accept unless the user explicitly requests it. Accept authorizes the plugin to merge and clean up; never accept work yourself. Before ending each turn, report your task outcome once with the bb CLI. For changes use the commit-message form above; for read-only/no-change work run `bb kanban report done` when your assigned work is complete, including a review whose findings have been delivered to its parent. Findings, recommendations, or future work for someone else do not make a completed review Waiting. Run `bb kanban report waiting` only when your own task needs user input to proceed. Waiting for a running subtask remains Active. Do not omit the outcome report: idle alone cannot distinguish completion from an unanswered question. Never accept work on the user's behalf.",
   }));
   bb.rpc.register(rpcContract, {
     board_default_environment: ({ projectId, hostId }) => defaultEnvironment(projectId, hostId),
@@ -324,6 +334,7 @@ export default function plugin(bb: BbPluginApi) {
     commands: {
       report: cliCommand({
         summary: "Report whether the current task is complete or waiting for input",
+        options: { "commit-message": { type: "string", description: "Prepare staged task-owned changes for committing when the user clicks Accept" } },
         positionals: [{ name: "outcome", description: "done or waiting", required: true }],
         async run(input, ctx) {
           if (!ctx.threadId) throw new PluginCliError("Run this command from the agent's current thread.");
@@ -332,7 +343,18 @@ export default function plugin(bb: BbPluginApi) {
           const outcomeRequestId = await latestRequest(ctx.threadId);
           if (!outcomeRequestId) throw new PluginCliError("No current turn to report.");
           if (outcome.data === "done") await merges.checkDone(ctx.threadId);
-          await bb.sdk.threads.updatePluginMetadata({ threadId: ctx.threadId, set: { outcome: outcome.data, outcomeRequestId, acceptedFor: null } });
+          let stagedAcceptance = null;
+          const commitMessage = input.options["commit-message"];
+          if (commitMessage !== undefined) {
+            if (outcome.data !== "done" || typeof commitMessage !== "string" || !commitMessage.trim() || commitMessage.length > 500) throw new PluginCliError("Use a nonempty commit message (up to 500 characters) with report done.");
+            const thread = await bb.sdk.threads.get({ threadId: ctx.threadId });
+            if (!thread.environmentId) throw new PluginCliError("No task checkout is available.");
+            const environment = await bb.sdk.environments.get({ environmentId: thread.environmentId });
+            if (!environment.isGitRepo || !environment.path) throw new PluginCliError("The task is not in a Git checkout.");
+            const snapshot = await merges.host.call("stagedSnapshot", { path: environment.path }, { hostId: environment.hostId });
+            stagedAcceptance = { environmentId: environment.id, path: environment.path, message: commitMessage.trim(), snapshot };
+          }
+          await bb.sdk.threads.updatePluginMetadata({ threadId: ctx.threadId, set: { outcome: outcome.data, outcomeRequestId, acceptedFor: null, stagedAcceptance } });
           if (outcome.data === "done") await merges.reportDone(ctx.threadId);
           bb.realtime.publish(CHANGED, { threadId: ctx.threadId });
           return { exitCode: 0, stdout: `Task outcome: ${outcome.data}` };
