@@ -12,6 +12,7 @@ export function ThreadAcceptance() {
   const [error, setError] = useState<string | null>(null);
   const [reviewRequired, setReviewRequired] = useState(false);
   const [pending, setPending] = useState(false);
+  const [committing, setCommitting] = useState(false);
   const request = useRef(0);
   const scope = useRef(threadId);
   scope.current = threadId;
@@ -27,7 +28,7 @@ export function ThreadAcceptance() {
   }, [rpc, threadId]);
   useEffect(() => {
     scope.current = threadId;
-    setCard(null); setPending(false); setError(null); setReviewRequired(false);
+    setCard(null); setPending(false); setCommitting(false); setError(null); setReviewRequired(false);
     void refresh();
     return () => { request.current++; scope.current = null; };
   }, [refresh, view.run.isRunning, view.run.isSubmitting, connection]);
@@ -46,7 +47,19 @@ export function ThreadAcceptance() {
         </span>
         <span className="text-muted-foreground">{card.merging ? "Landing changes and removing the task worktree" : column.description}</span>
       </div>
-    {canAccept && <button type="button" disabled={pending} className="ml-auto min-h-8 shrink-0 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50" onClick={async () => {
+    {canAccept && <div className="ml-auto flex items-center gap-2">
+      <button type="button" disabled={pending || !card.hasPreparedCommit} className="min-h-8 shrink-0 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50" onClick={async () => {
+        setPending(true); setCommitting(true);
+        try {
+          await rpc.call("board_commit", { threadId, expectedUpdatedAt: card.updatedAt });
+          if (scope.current === threadId) { setReviewRequired(false); await refresh(); }
+        } catch (cause) {
+          if (scope.current === threadId) setError(cause instanceof Error ? cause.message : String(cause));
+        } finally {
+          if (scope.current === threadId) { setPending(false); setCommitting(false); }
+        }
+      }}>{committing ? "Committing…" : "Commit"}</button>
+      <button type="button" disabled={pending} className="min-h-8 shrink-0 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50" onClick={async () => {
       setPending(true);
       try {
         const next = await rpc.call("board_accept", { threadId, expectedUpdatedAt: card.updatedAt, ...(reviewRequired ? { acknowledgeChanges: true } : {}) });
@@ -59,7 +72,7 @@ export function ThreadAcceptance() {
       } finally {
         if (scope.current === threadId) setPending(false);
       }
-    }}>{pending ? "Accepting…" : reviewRequired ? "Accept anyway" : "Accept"}</button>}
+    }}>{pending && !committing ? "Accepting…" : reviewRequired ? "Accept anyway" : "Accept"}</button></div>}
     </div>
     {card.mergeError && <div role="alert" className="mt-2 text-xs text-destructive">{card.mergeError} <button type="button" disabled={pending || view.run.isRunning || view.run.isSubmitting} className="underline" onClick={async () => {
       setPending(true);

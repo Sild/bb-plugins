@@ -13,6 +13,7 @@ const cardSchema = z.object({
   id: z.string(), projectId: z.string(), title: z.string(), parentThreadId: z.string().nullable().optional(),
   acceptedAt: z.number().nullable().optional(),
   reviewRequired: z.boolean().optional(),
+  hasPreparedCommit: z.boolean().optional(),
   merging: z.boolean().optional(), mergeError: z.string().nullable().optional(),
   column: columnSchema, status: z.string(), updatedAt: z.number(),
 });
@@ -75,6 +76,10 @@ export const rpcContract = defineRpcContract({
     input: z.object({ threadId: z.string().min(1) }),
     output: cardSchema,
   },
+  board_commit: {
+    input: z.object({ threadId: z.string().min(1), expectedUpdatedAt: z.number() }),
+    output: cardSchema,
+  },
   board_accept: {
     input: z.object({ threadId: z.string().min(1), expectedUpdatedAt: z.number(), acknowledgeChanges: z.boolean().optional() }),
     output: cardSchema,
@@ -131,6 +136,7 @@ export default function plugin(bb: BbPluginApi) {
       id: thread.id, projectId: thread.projectId, parentThreadId: await workflowParent(bb, thread),
       title: thread.title || thread.titleFallback || thread.id,
       column: metadata.merging === true ? "active" : deriveColumn({ ...state, completionReported, status: thread.status, runtimeStatus: thread.runtime.displayStatus, updatedAt: thread.updatedAt }, metadata.acceptedFor),
+      hasPreparedCommit: metadata.stagedAcceptance != null,
       merging: metadata.merging === true, mergeError: typeof metadata.mergeError === "string" ? metadata.mergeError : null,
       status: thread.status, updatedAt: thread.updatedAt,
       acceptedAt: typeof metadata.acceptedAt === "number" && Number.isFinite(metadata.acceptedAt) ? metadata.acceptedAt : null,
@@ -205,11 +211,7 @@ export default function plugin(bb: BbPluginApi) {
     return { archiveUndated, archiveTruncated, cards, projects, folders: projectFolders(projects, folderState.groups), truncated: visible.length > MAX_THREADS, folderWarning: folderState.warning };
   }
 
-  async function accept(threadId: string, expectedUpdatedAt: number, acknowledgeChanges = false): Promise<Card> {
-    const card = await threadCard(threadId);
-    if (card.column !== "done") throw new Error("Only a Done thread can be accepted. Refresh to see its current status.");
-    if (card.updatedAt !== expectedUpdatedAt && !acknowledgeChanges) return { ...card, reviewRequired: true };
-    await merges.checkDone(threadId);
+  async function commitPrepared(threadId: string) {
     const metadata = await bb.sdk.threads.getPluginMetadata({ threadId });
     if (metadata.stagedAcceptance) {
       const prepared = z.object({ environmentId: z.string(), path: z.string(), message: z.string(), snapshot: stagedSnapshotSchema }).parse(metadata.stagedAcceptance);
@@ -218,7 +220,26 @@ export default function plugin(bb: BbPluginApi) {
       const environment = await bb.sdk.environments.get({ environmentId: prepared.environmentId });
       if (environment.path !== prepared.path || environment.status !== "ready") throw new Error("The task checkout is unavailable or changed since Done.");
       await merges.host.call("commitStaged", { path: prepared.path, snapshot: prepared.snapshot, message: prepared.message }, { hostId: environment.hostId, timeoutMs: 180_000 });
+      await bb.sdk.threads.updatePluginMetadata({ threadId, set: { stagedAcceptance: null } });
     }
+  }
+
+  async function commit(threadId: string, expectedUpdatedAt: number): Promise<Card> {
+    const card = await threadCard(threadId);
+    if (card.column !== "done") throw new Error("Only a Done thread can be committed. Refresh to see its current status.");
+    if (card.updatedAt !== expectedUpdatedAt) throw new Error("The thread changed since review. Refresh and review its latest work before committing.");
+    await merges.checkDone(threadId);
+    await commitPrepared(threadId);
+    bb.realtime.publish(CHANGED, { threadId });
+    return threadCard(threadId);
+  }
+
+  async function accept(threadId: string, expectedUpdatedAt: number, acknowledgeChanges = false): Promise<Card> {
+    const card = await threadCard(threadId);
+    if (card.column !== "done") throw new Error("Only a Done thread can be accepted. Refresh to see its current status.");
+    if (card.updatedAt !== expectedUpdatedAt && !acknowledgeChanges) return { ...card, reviewRequired: true };
+    await merges.checkDone(threadId);
+    await commitPrepared(threadId);
     if (await merges.begin(threadId)) return threadCard(threadId);
     await bb.sdk.threads.updatePluginMetadata({ threadId, set: { acceptedFor: card.updatedAt, acceptedAt: Date.now() } });
     bb.realtime.publish(CHANGED, { threadId });
@@ -300,7 +321,7 @@ export default function plugin(bb: BbPluginApi) {
 
   bb.agents.configure(() => ({
     tools: [], skills: ["kanban-board"],
-    instructions: "For Git tasks, validate and self-review, then stage only task-owned hunks and report Done with `bb kanban report done --commit-message \"scope: summary\"`. Leave changes uncommitted for review; the user clicking Accept authorizes the plugin to commit the captured staged changes, then merge a managed worktree if applicable. Preserve unrelated staged and unstaged changes; if ownership of existing staged changes is ambiguous, ask rather than include them. Read-only/no-change tasks report Done without a commit message and create no commit. Never commit before Accept unless the user explicitly requests it. Accept authorizes the plugin to merge and clean up; never accept work yourself. Before ending each turn, report your task outcome once with the bb CLI. For changes use the commit-message form above; for read-only/no-change work run `bb kanban report done` when your assigned work is complete, including a review whose findings have been delivered to its parent. Findings, recommendations, or future work for someone else do not make a completed review Waiting. Run `bb kanban report waiting` only when your own task needs user input to proceed. Waiting for a running subtask remains Active. Do not omit the outcome report: idle alone cannot distinguish completion from an unanswered question. Never accept work on the user's behalf.",
+    instructions: "For Git tasks, validate and self-review, then stage only task-owned hunks and report Done with `bb kanban report done --commit-message \"scope: summary\"`. Leave changes uncommitted for review; the user clicking Commit commits the captured staged changes while leaving the task Done; clicking Accept commits anything still prepared, then merges a managed worktree if applicable. Preserve unrelated staged and unstaged changes; if ownership of existing staged changes is ambiguous, ask rather than include them. Read-only/no-change tasks report Done without a commit message and create no commit. Never commit before Accept unless the user explicitly requests it. Accept authorizes the plugin to merge and clean up; never accept work yourself. Before ending each turn, report your task outcome once with the bb CLI. For changes use the commit-message form above; for read-only/no-change work run `bb kanban report done` when your assigned work is complete, including a review whose findings have been delivered to its parent. Findings, recommendations, or future work for someone else do not make a completed review Waiting. Run `bb kanban report waiting` only when your own task needs user input to proceed. Waiting for a running subtask remains Active. Do not omit the outcome report: idle alone cannot distinguish completion from an unanswered question. Never accept work on the user's behalf.",
   }));
   bb.rpc.register(rpcContract, {
     board_default_environment: ({ projectId, hostId }) => defaultEnvironment(projectId, hostId),
@@ -326,6 +347,7 @@ export default function plugin(bb: BbPluginApi) {
       return result;
     },
     board_thread: ({ threadId }) => threadCard(threadId),
+    board_commit: ({ threadId, expectedUpdatedAt }) => commit(threadId, expectedUpdatedAt),
     board_accept: ({ threadId, expectedUpdatedAt, acknowledgeChanges }) => accept(threadId, expectedUpdatedAt, acknowledgeChanges),
     board_accept_review: ({ threadId, parentThreadId }) => acceptDeliveredReview(threadId, parentThreadId),
   });

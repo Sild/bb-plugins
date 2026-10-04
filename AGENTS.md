@@ -8,4 +8,4 @@
 - Run `git diff --check` before committing. Keep credentials, databases, installed dependencies, and generated bundles out of Git.
 - For sync changes: `python3 -m unittest discover -s scripts -p '_test_*.py'`; check the automatic-capture contract in the installation spec. Never commit `.bb/plugin-sync-state/`.
 
-- Task completion leaves changes uncommitted for review. Validate and stage only task-owned hunks, then use `bb kanban report done --commit-message "scope: summary"`. User Accept commits the prepared staged snapshot. Read-only tasks report Done without a commit message. Commit earlier only when explicitly requested.
+- Task completion leaves changes uncommitted for review. Validate and stage only task-owned hunks, then use `bb kanban report done --commit-message "scope: summary"`. User Commit commits the prepared staged snapshot while leaving the task Done; Accept commits any remaining prepared snapshot and accepts the task. Read-only tasks report Done without a commit message. Commit earlier only when explicitly requested.

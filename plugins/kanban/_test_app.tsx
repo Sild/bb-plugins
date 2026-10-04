@@ -468,3 +468,27 @@ test("malformed board session state falls back to the default view", async () =>
   expect(screen.getByRole("region", { name: "Project Beta" })).toBeTruthy();
   expect(slot.container.querySelector("[data-kanban-board]")!.scrollTop).toBe(0);
 });
+
+test("Commit stays separate from Accept, disables both while pending and leaves the task Done", async () => {
+  const app = await loadPluginApp(() => import("./app"));
+  let card = { ...initial.cards[0], column: "done" as BoardData["cards"][number]["column"], hasPreparedCommit: true };
+  let finish!: () => void;
+  const commit = vi.fn(() => new Promise(resolve => { finish = () => resolve(card = { ...card, hasPreparedCommit: false }); }));
+  const accept = vi.fn(() => (card = { ...card, column: "accepted" }));
+  const slot = renderSlot(app.composerCustomizations[0].banners![0], {}, {
+    composer: { scope: { kind: "thread", threadId: "t1" } },
+    rpc: { board_thread: () => card, board_commit: commit, board_accept: accept },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "Commit" }));
+  await waitFor(() => expect(commit).toHaveBeenCalledTimes(1));
+  expect((screen.getByRole("button", { name: "Committing…" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Accept" }) as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => finish());
+  await waitFor(() => expect((screen.getByRole("button", { name: "Commit" }) as HTMLButtonElement).disabled).toBe(true));
+  expect(screen.getByRole("status", { name: "Kanban status" }).textContent).toContain("Done");
+  expect(accept).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+  await waitFor(() => expect(accept).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Commit" })).toBeNull());
+  slot.lifecycle.unmount();
+});

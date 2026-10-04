@@ -9,13 +9,13 @@ function setup() {
   thread.runtime.displayStatus = "idle";
   const environment = { id: "env", hostId: "host", projectId: "p1", isGitRepo: true, isWorktree: true, managed: true, environmentProviderId: "git-worktree", path: "/task", status: "ready", lifecycle: { phase: "active" } };
   const metadata: Record<string, unknown> = { outcome: "done", outcomeRequestId: "turn1" };
-  let turn = "turn1", clean = true, mergeStatus = "merged", mergeMessage = "conflicts", failCleanup = false, verified = true;
+  let turn = "turn1", clean = true, mergeStatus = "merged", mergeMessage = "conflicts", failCleanup = false, verified = true, failCommit = false;
   const calls: string[] = [];
   const { bb, harness } = createFakePluginHost({ pluginId: "kanban", agentSkillIds: ["kanban-board"],
     experimental_callHostRpc: async ({ method }) => {
       calls.push(method);
       if (method === "stagedSnapshot") return { branch: "task", head: "a".repeat(40), tree: "b".repeat(40) };
-      if (method === "commitStaged") { clean = true; return "c".repeat(40); }
+      if (method === "commitStaged") { if (failCommit) throw new Error("commit failed"); clean = true; return "c".repeat(40); }
       if (method === "inspect") return { isGit: true, branch: "target", clean, operation: false };
       if (method === "target") return { checkout: "/checkout", worktree: "/task", branch: "target", taskBranch: "task", taskHead: "a".repeat(40) };
       if (method === "merge") return { status: mergeStatus, message: mergeMessage };
@@ -35,7 +35,7 @@ function setup() {
     },
   });
   plugin(bb); dispose.push(() => harness.lifecycle.dispose());
-  return { bb, harness, thread, environment, metadata, calls, setVerified: (value: boolean) => { verified = value; }, setClean: (value: boolean) => { clean = value; }, setMerge: (value: string, message = "conflicts") => { mergeStatus = value; mergeMessage = message; }, setCleanupFailure: (value: boolean) => { failCleanup = value; } };
+  return { bb, harness, thread, environment, metadata, calls, setCommitFailure: (value: boolean) => { failCommit = value; }, setVerified: (value: boolean) => { verified = value; }, setClean: (value: boolean) => { clean = value; }, setMerge: (value: string, message = "conflicts") => { mergeStatus = value; mergeMessage = message; }, setCleanupFailure: (value: boolean) => { failCleanup = value; } };
 }
 test("Done permits uncommitted changes without creating a commit", async () => {
   const ctx = setup(); ctx.setClean(false); delete ctx.metadata.outcome;
@@ -226,4 +226,48 @@ test("worktree Accept commits prepared changes before capturing and merging the 
   await ctx.harness.behavior.callRpc("board_accept", { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt });
   expect(ctx.calls.indexOf("commitStaged")).toBeLessThan(ctx.calls.indexOf("target"));
   expect(ctx.calls.indexOf("commitStaged")).toBeLessThan(ctx.calls.indexOf("merge"));
+});
+
+test("Commit leaves a worktree Done without merging; Accept commits later prepared changes", async () => {
+  const ctx = setup(); ctx.setClean(false);
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: first changes"], { threadId: "t1" });
+  const input = { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt };
+  expect(await ctx.harness.behavior.callRpc("board_commit", input)).toMatchObject({ column: "done", hasPreparedCommit: false });
+  expect(ctx.metadata.acceptedFor).toBeNull();
+  expect(ctx.calls).not.toContain("target"); expect(ctx.calls).not.toContain("merge");
+  expect(ctx.calls.filter(call => call === "commitStaged")).toHaveLength(1);
+  // Repeated Commit and Accept after a manual commit do not create empty commits.
+  await ctx.harness.behavior.callRpc("board_commit", input);
+  expect(ctx.calls.filter(call => call === "commitStaged")).toHaveLength(1);
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: remaining changes"], { threadId: "t1" });
+  expect(await ctx.harness.behavior.callRpc("board_accept", input)).toMatchObject({ column: "accepted", hasPreparedCommit: false });
+  expect(ctx.calls.filter(call => call === "commitStaged")).toHaveLength(2);
+  expect(ctx.calls.indexOf("merge")).toBeGreaterThan(ctx.calls.lastIndexOf("commitStaged"));
+});
+test("Commit rejects changed or non-Done threads without touching Git", async () => {
+  const ctx = setup();
+  await expect(ctx.harness.behavior.callRpc("board_commit", { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt - 1 })).rejects.toThrow("changed since review");
+  ctx.thread.status = "active"; ctx.thread.runtime.displayStatus = "active";
+  await expect(ctx.harness.behavior.callRpc("board_commit", { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt })).rejects.toThrow("Only a Done");
+  expect(ctx.calls).toEqual([]);
+});
+test("Commit followed by Accept with no remaining snapshot commits only once", async () => {
+  const ctx = setup(); ctx.environment.isWorktree = false;
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: changes"], { threadId: "t1" });
+  const input = { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt };
+  await ctx.harness.behavior.callRpc("board_commit", input);
+  expect(await ctx.harness.behavior.callRpc("board_accept", input)).toMatchObject({ column: "accepted" });
+  expect(ctx.calls.filter(call => call === "commitStaged")).toHaveLength(1);
+});
+
+test("a failed Commit preserves the pending snapshot and keeps acceptance incomplete", async () => {
+  const ctx = setup();
+  await ctx.harness.behavior.runCli(["report", "done", "--commit-message", "task: changes"], { threadId: "t1" });
+  ctx.setCommitFailure(true);
+  const input = { threadId: "t1", expectedUpdatedAt: ctx.thread.updatedAt };
+  await expect(ctx.harness.behavior.callRpc("board_commit", input)).rejects.toThrow("commit failed");
+  expect(await ctx.harness.behavior.callRpc("board_thread", { threadId: "t1" })).toMatchObject({ column: "done", hasPreparedCommit: true });
+  expect(ctx.calls).not.toContain("merge");
+  ctx.setCommitFailure(false);
+  expect(await ctx.harness.behavior.callRpc("board_commit", input)).toMatchObject({ column: "done", hasPreparedCommit: false });
 });

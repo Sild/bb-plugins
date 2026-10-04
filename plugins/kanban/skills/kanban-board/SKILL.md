@@ -12,7 +12,8 @@ Before your final handoff, report the semantic outcome for your current thread:
 For Git tasks, validate and self-review, stage only task-owned hunks, then run
 `bb kanban report done --commit-message "scope: summary"`. Done captures the staged
 Git tree, HEAD and branch without committing. Leave the diff uncommitted for user
-review. Accept commits that snapshot and then lands managed worktrees when needed.
+review. User Commit commits that snapshot and leaves the task Done. Accept commits
+any remaining prepared snapshot and then lands managed worktrees when needed.
 Changed HEAD, branch or staged contents require a new review and Done report.
 Preserve unrelated staged and unstaged work. If pre-existing staged ownership is
 ambiguous, ask rather than include it. Read-only/no-change tasks use ordinary
